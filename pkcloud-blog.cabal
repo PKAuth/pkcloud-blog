@@ -15,10 +15,18 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib
+  exposed-modules:     PKCloud.Blog
+  other-modules:       
+                       Import
+                       PKCloud.Blog.Core
+                       PKCloud.Blog.Routes
+                       PKCloud.Blog.Handler.Root
+                       PKCloud.Blog.Handler.Posts
   build-depends:       base >= 4.7 && < 5
                      , pkcloud-core
   default-language:    Haskell2010
+  default-extensions:          RankNTypes, FlexibleContexts, TemplateHaskell, QuasiQuotes, TypeFamilies, OverloadedStrings
+  ghc-options:         -Werror -Wall -fno-warn-orphans -fno-warn-type-defaults -fno-warn-name-shadowing
 
 -- executable new-template-exe
 --   hs-source-dirs:      app
@@ -28,12 +36,12 @@ library
 --                      , new-template
 --   default-language:    Haskell2010
 
-test-suite new-template-test
+test-suite pkcloud-blog-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.hs
   build-depends:       base
-                     , new-template
+                     , pkcloud-blog
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 

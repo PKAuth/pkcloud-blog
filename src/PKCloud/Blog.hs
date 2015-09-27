@@ -1,4 +1,13 @@
-module PKCloud.Blog where
+{-# LANGUAGE TypeFamilies #-}
+
+module PKCloud.Blog (
+      PKCloudBlog(..)
+    , module Export
+    ) where
+
+import PKCloud.Import
+
+import PKCloud.Blog.Routes as Export
 
 -- BlogPost
 --     acl AccessControlList
@@ -22,23 +31,14 @@ type PostMarkdown = Text
 type PostContent = Text
 type PostPublished = Bool
 
-class PKCloudBlog master where
+class YesodAuth master => PKCloudBlog master where
     type PKPost master
     type PKPostEdit master
 
-    pkPost :: user -> PostLink -> UTCTime -> PostPublished -> PKPost master
-    pkPostEdit :: PostTitle -> PostMarkdown -> PostContent -> user -> UTCTime -> PKPostEdit master
+    pkPost :: AuthId master -> PostLink -> UTCTime -> PostPublished -> PKPost master
+    pkPostEdit :: PostTitle -> PostMarkdown -> PostContent -> AuthId master -> UTCTime -> PKPostEdit master
 
     -- canPost :: user -> m Bool ???
     
 
 
--- routes
-
-mkYesodSubData "PKCloudBlog" [parseRoutes|
-/posts
-/posts/#page
-/author/#user
-/new
-/edit/#link
-|]
