@@ -1,11 +1,13 @@
 module PKCloud.Blog.Routes where
 
+import PKCloud.Blog.Core
 import PKCloud.Import
 
-import PKCloud.Blog.Core
+-- import PKCloud.Blog.Handler.Posts
+-- import PKCloud.Blog.Handler.Root
 
-mkYesodSubData "PKCloudBlog" [parseRoutes|
-/ RootsR GET
+mkYesodSubData "PKCloudBlogApp" [parseRoutes|
+/ RootR GET
 /posts PostsR GET
 |]
 

@@ -7,7 +7,14 @@ module PKCloud.Blog (
 
 import PKCloud.Import
 
+import PKCloud.Blog.Core as Export
 import PKCloud.Blog.Routes as Export
+
+import PKCloud.Blog.Handler.Posts
+import PKCloud.Blog.Handler.Root
+
+instance (PKCloudBlog master, Yesod master) => YesodSubDispatch PKCloudBlogApp (HandlerT master IO) where
+    yesodSubDispatch = $(mkYesodSubDispatch resourcesPKCloudBlogApp)
 
 -- BlogPost
 --     acl AccessControlList
@@ -23,22 +30,4 @@ import PKCloud.Blog.Routes as Export
 --     html Html
 --     editor user..
 --     date UTCTime
-
-    
-type PostLink = Text
-type PostTitle = Text
-type PostMarkdown = Text
-type PostContent = Text
-type PostPublished = Bool
-
-class YesodAuth master => PKCloudBlog master where
-    type PKPost master
-    type PKPostEdit master
-
-    pkPost :: AuthId master -> PostLink -> UTCTime -> PostPublished -> PKPost master
-    pkPostEdit :: PostTitle -> PostMarkdown -> PostContent -> AuthId master -> UTCTime -> PKPostEdit master
-
-    -- canPost :: user -> m Bool ???
-    
-
 
