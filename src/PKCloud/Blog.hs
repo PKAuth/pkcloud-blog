@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, UndecidableInstances #-}
 
 module PKCloud.Blog (
       PKCloudBlog(..)
@@ -7,13 +7,14 @@ module PKCloud.Blog (
 
 import PKCloud.Import
 
-import PKCloud.Blog.Core as Export
-import PKCloud.Blog.Routes as Export
 
 import PKCloud.Blog.Handler.Posts
 import PKCloud.Blog.Handler.Root
 
-instance (PKCloudBlog master, Yesod master) => YesodSubDispatch PKCloudBlogApp (HandlerT master IO) where
+import PKCloud.Blog.Core as Export
+import PKCloud.Blog.Routes as Export
+
+instance (PKCloudBlog master) => YesodSubDispatch PKCloudBlogApp (HandlerT master IO) where
     yesodSubDispatch = $(mkYesodSubDispatch resourcesPKCloudBlogApp)
 
 -- BlogPost
