@@ -21,13 +21,15 @@ library
                        PKCloud.Blog.Core
                        PKCloud.Blog.Routes
                        PKCloud.Blog.Handler.Root
+                       PKCloud.Blog.Handler.New
                        PKCloud.Blog.Handler.Posts
   build-depends:       base >= 4.7 && < 5
+                     , blaze-markup
                      , esqueleto
                      , persistent
                      , pkcloud-core
   default-language:    Haskell2010
-  default-extensions:  RankNTypes, FlexibleContexts, TemplateHaskell, QuasiQuotes, TypeFamilies, OverloadedStrings, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables
+  default-extensions:  RankNTypes, FlexibleContexts, TemplateHaskell, QuasiQuotes, TypeFamilies, OverloadedStrings, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, FunctionalDependencies, ViewPatterns, ImpredicativeTypes
   ghc-options:         -Werror -Wall -fno-warn-orphans -fno-warn-type-defaults -fno-warn-name-shadowing
 
 -- executable new-template-exe

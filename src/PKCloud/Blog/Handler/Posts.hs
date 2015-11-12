@@ -1,10 +1,10 @@
-module PKCloud.Blog.Handler.Posts (getPostsR, getPostsPageR) where
+module PKCloud.Blog.Handler.Posts (getPKCloudBlogPostsR, getPKCloudBlogPostsPageR) where
 
 import Import
 
 import qualified Data.List as List
 
-getPostsHelper :: forall site . Int64 -> Handler site Html
+getPostsHelper :: forall site post edit . Int64 -> Handler site post edit Html
 -- getPostsHelper :: forall site . (PKCloudBlog site, GeneralPersistSql site (HandlerT site IO)) => Int64 -> HandlerT PKCloudBlogApp (HandlerT site IO) Html
 getPostsHelper page | page < 1 = getPostsHelper 1
 getPostsHelper page = lift $ do
@@ -23,13 +23,17 @@ getPostsHelper page = lift $ do
         where_ (p ^. pkPostPublishedField ==. val True)
         limit qLimit
         offset qOffset
+        orderBy [desc (p ^. pkPostPublishedField)]
         return p
 
     pkcloudDefaultLayout $ case posts of
         [] -> 
-            [whamlet|
-                There are no posts yet.
-            |]
+            if page == 1 then
+                [whamlet|
+                    There are no posts yet. Check back later!
+                |]
+            else
+                notFound
         _ -> do
             -- Display up to 10 of their previews.
             let postsW = mconcat $ map displayPreview $ List.take postsPerPage' posts
@@ -46,9 +50,9 @@ getPostsHelper page = lift $ do
         postsPerPage' :: Int
         postsPerPage' = fromInteger $ toInteger postsPerPage
         qLimit = postsPerPage + 1
-        qOffset = (page - 1) * postsPerPage - 1
+        qOffset = (page - 1) * postsPerPage
 
-        displayPreview :: Entity (PKPost site) -> WidgetT site IO ()
+        displayPreview :: Entity post -> WidgetT site IO ()
         displayPreview (Entity postId post) = do
             -- Get latest edit.
             editL <- handlerToWidget $ runDB' $ select $ from $ \e -> do
@@ -79,8 +83,8 @@ getPostsHelper page = lift $ do
         --             #{pkPostLink post}
         --     |]
 
-getPostsR :: Handler site Html
-getPostsR = getPostsHelper 1
+getPKCloudBlogPostsR :: Handler site post edit Html
+getPKCloudBlogPostsR = getPostsHelper 1
 
-getPostsPageR :: Int64 -> Handler site Html
-getPostsPageR = getPostsHelper
+getPKCloudBlogPostsPageR :: Int64 -> Handler site post edit Html
+getPKCloudBlogPostsPageR = getPostsHelper

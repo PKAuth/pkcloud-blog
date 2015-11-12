@@ -8,8 +8,10 @@ import PKCloud.Blog.Core
 -- import PKCloud.Blog.Handler.Root
 
 mkYesodSubData "PKCloudBlogApp" [parseRoutes|
-/ RootR GET
-/posts PostsR GET
+/ PKCloudBlogRootR GET
+/posts PKCloudBlogPostsR GET
+/posts/#Int64 PKCloudBlogPostsPageR GET
+/new PKCloudBlogNewR GET POST
 |]
 
 -- routes
@@ -20,4 +22,5 @@ mkYesodSubData "PKCloudBlogApp" [parseRoutes|
 -- /author/#user
 -- /new
 -- /edit/#link
+-- /post/#link
 -- |]

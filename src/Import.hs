@@ -3,6 +3,9 @@
 module Import (
       module Export
     , Handler
+--     , Widget
+    , MasterWidget
+    , MasterForm
     ) where
 
 import PKCloud.Import as Export
@@ -10,21 +13,18 @@ import PKCloud.Import as Export
 import PKCloud.Blog.Core as Export
 import PKCloud.Blog.Routes as Export
 
--- import Control.Monad.IO.Class
--- import Control.Monad.Trans.Reader
--- import Database.Persist.Class
--- import Database.Persist.Sql (SqlBackend)
+-- TODO: Move to PKCloud.Import
+import Text.Blaze
+-- | Type for forms in master site.
+type MasterForm a = forall site . (RenderMessage site FormMessage) => Markup -> MForm (HandlerT site IO) (FormResult a, WidgetT site IO ())
 
 
 
-type Handler master a = (PKCloudBlog master) => HandlerT PKCloudBlogApp (HandlerT master IO) a
--- type Handler a = (MonadHandler m, MonadBaseControl IO m) => HandlerT PKCloudBlogApp (HandlerT master m) a
+-- type Handler master post edit a = (ToMasterRoute PKCloudBlogApp master, HandlerSite IO ~ master, PKCloudBlog master post edit) => HandlerT PKCloudBlogApp (HandlerT master IO) a
+type Handler master post edit a = (ToMasterRoute PKCloudBlogApp master, PKCloudBlog master post edit) => HandlerT PKCloudBlogApp (HandlerT master IO) a
+-- type Handler master post edit a = (ToMasterRoute PKCloudBlogApp master, HandlerSite IO ~ master, PKCloudBlog master post edit) => HandlerT PKCloudBlogApp (HandlerT master IO) a
 
+-- type Widget master post edit = (PKCloudBlog master post edit) => WidgetT PKCloudBlogApp (HandlerT master IO) ()
+-- type MasterWidget master = forall post edit . (PKCloudBlog master post edit) => WidgetT master IO ()
+type MasterWidget master = WidgetT master IO ()
 
--- class Monad m => GeneralPersist site m | m -> site where
---     type GeneralPersistBackend site
---     runDB' :: ReaderT (GeneralPersistBackend site) m a -> m a
--- 
--- class (GeneralPersistBackend site ~ SqlBackend, MonadIO m, GeneralPersist site m) => GeneralPersistSql site m
--- 
--- class (PersistEntity e, SqlBackend ~ PersistEntityBackend e) => SubEntity e

@@ -1,5 +1,7 @@
 {-# LANGUAGE TypeFamilies, UndecidableInstances #-}
 
+-- | This module typically is imported by end user sites.
+
 module PKCloud.Blog (
       PKCloudBlog(..)
     , module Export
@@ -7,14 +9,14 @@ module PKCloud.Blog (
 
 import PKCloud.Import
 
-
 import PKCloud.Blog.Handler.Posts
 import PKCloud.Blog.Handler.Root
+import PKCloud.Blog.Handler.New
 
 import PKCloud.Blog.Core as Export
 import PKCloud.Blog.Routes as Export
 
-instance (PKCloudBlog master) => YesodSubDispatch PKCloudBlogApp (HandlerT master IO) where
+instance (ToMasterRoute PKCloudBlogApp master, PKCloudBlog master post edit) => YesodSubDispatch PKCloudBlogApp (HandlerT master IO) where
     yesodSubDispatch = $(mkYesodSubDispatch resourcesPKCloudBlogApp)
 
 -- BlogPost
