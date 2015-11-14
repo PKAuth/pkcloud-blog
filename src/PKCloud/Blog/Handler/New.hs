@@ -59,17 +59,22 @@ renderNewForm markup = do
         slugSettings = disable $ withPlaceholder "Permalink" $ 
             bfs ("Permalink" :: Text)
 
-        contentSettings = withPlaceholder "Content" $ 
+        contentSettings = withAttr ("rows","10") $ withPlaceholder "Content" $ 
             bfs ("Content" :: Text)
 
         publishSettings = "Publish"
 
         withId i setting = setting {fsId = Just i}
 
+        withAttr a setting = 
+            let oldS = fsAttrs setting in
+            setting {fsAttrs = a:oldS}
+
         disable setting = 
             let attrs = fsAttrs setting in
             setting {fsAttrs = ("disabled","disabled"):attrs}
 
+        -- https://gist.github.com/carymrobbins/590515bb8dfb48573527
         -- bootstrapCheckBoxField :: (ToMarkup a, RenderMessage (HandlerSite m) FormMessage, Monad m) => a -> Field m Bool
         bootstrapCheckBoxField label = checkBoxField
             { fieldView = \theId name attrs val _ -> [whamlet|
