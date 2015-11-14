@@ -12,6 +12,7 @@ type PostPreview = Text
 type PostMarkdown = Text
 -- type PostContent = Text
 type PostPublished = Bool
+-- type PostEditPublished = Bool
 
 class (SubEntity (post), SubEntity (edit), PKCloud master) => PKCloudBlog master post edit | master -> post, post -> master, master -> edit, edit -> master where
     -- | Post datatype and getters.
@@ -27,7 +28,7 @@ class (SubEntity (post), SubEntity (edit), PKCloud master) => PKCloudBlog master
 
     -- | Post edit datatype and getters.
     -- data PKPostEdit master
-    pkPostEdit :: PostTitle -> Key (post) -> PostMarkdown -> PostPreview -> AuthId master -> UTCTime -> edit
+    pkPostEdit :: PostTitle -> Key (post) -> PostMarkdown -> PostPreview -> AuthId master -> UTCTime -> PostEditPublished -> edit
     pkPostEditIdField :: EntityField (edit) (Key (edit))
     pkPostEditTitle :: edit -> PostTitle
     pkPostEditTitleField :: EntityField (edit) PostTitle
@@ -38,6 +39,11 @@ class (SubEntity (post), SubEntity (edit), PKCloud master) => PKCloudBlog master
     pkPostEditDate :: edit -> UTCTime
     pkPostEditDateField :: EntityField (edit) UTCTime
     pkPostEditEditor :: edit -> AuthId master
+    pkPostEditPublished :: edit -> PostEditPublished
+    pkPostEditPublishedField :: EntityField edit PostEditPublished
+    -- Active (limit 1 per post?)
+    -- Previews?
+    --  Create -> Preview -> Edit??
 
     -- canPost :: user -> m Bool ???
     
@@ -51,7 +57,7 @@ pkBlogRetrievePosts n = do
         return p
     foldM (\acc postE@(Entity postId _) -> do
         editL <- runDB' $ select $ from $ \e -> do
-            where_ (e ^. pkPostEditPostField ==. val postId)
+            where_ (e ^. pkPostEditPostField ==. val postId &&. e ^. pkPostEditPublishedField ==. val True)
             limit 1
             orderBy [desc (e ^. pkPostEditDateField)]
             return e

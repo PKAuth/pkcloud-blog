@@ -26,23 +26,25 @@ getPostsHelper page = lift $ do
         orderBy [desc (p ^. pkPostPublishedField)]
         return p
 
-    pkcloudDefaultLayout $ case posts of
-        [] -> 
-            if page == 1 then
-                [whamlet|
-                    There are no posts yet. Check back later!
-                |]
-            else
-                notFound
-        _ -> do
-            -- Display up to 10 of their previews.
-            let postsW = mconcat $ map displayPreview $ List.take postsPerPage' posts
+    pkcloudDefaultLayout $ do
+        pkcloudSetTitle "Posts"
+        case posts of
+            [] -> 
+                if page == 1 then
+                    [whamlet|
+                        There are no posts yet. Check back later!
+                    |]
+                else
+                    notFound
+            _ -> do
+                -- Display up to 10 of their previews.
+                let postsW = mconcat $ map displayPreview $ List.take postsPerPage' posts
 
-            [whamlet|
-                ^{postsW}
-                TODO
-            |]
-            -- Display next/previous buttons.
+                [whamlet|
+                    ^{postsW}
+                    TODO
+                |]
+                -- Display next/previous buttons.
 
     where 
         postsPerPage :: Int64
@@ -56,7 +58,7 @@ getPostsHelper page = lift $ do
         displayPreview (Entity postId post) = do
             -- Get latest edit.
             editL <- handlerToWidget $ runDB' $ select $ from $ \e -> do
-                where_ (e ^. pkPostEditPostField ==. val postId)
+                where_ (e ^. pkPostEditPostField ==. val postId &&. e ^. pkPostEditPublishedField ==. val True)
                 limit 1
                 orderBy [desc (e ^. pkPostEditDateField)]
                 return e

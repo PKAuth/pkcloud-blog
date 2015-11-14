@@ -10,9 +10,16 @@ data FormData = FormData {
     }
 
 generateHTML :: forall site post edit . (MasterWidget site, Enctype) -> Handler site post edit Html
-generateHTML (formW, formEnc) = lift $ pkcloudDefaultLayout [whamlet|
+generateHTML (formW, formEnc) = lift $ pkcloudDefaultLayout $ do
+    pkcloudSetTitle "New post"
+    [whamlet|
         <form role=form method=post action="@{toMasterRoute PKCloudBlogNewR}" enctype=#{formEnc}>
             ^{formW}
+            <div .form-group .optional .pull-right>
+                <button type="submit" name="preview" .btn .btn-default>
+                    Preview
+                <button type="submit" name="create" .btn .btn-primary>
+                    Create
     |]
 
 renderNewForm :: MasterForm FormData
@@ -22,6 +29,7 @@ renderNewForm markup = do
     (res, widget') <- renderBootstrap3 BootstrapBasicForm (FormData
         <$> areq textField (withId titleId titleSettings) Nothing
         <*> areq textField (withId slugId slugSettings) Nothing
+--        <*  bootstrapSubmit ("Submit" :: BootstrapSubmit Text)
       ) markup
     let widget = do
             toWidget [julius|
