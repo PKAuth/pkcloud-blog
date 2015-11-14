@@ -21,7 +21,7 @@ type MasterForm a = forall site . (RenderMessage site FormMessage) => Markup -> 
 
 
 -- type Handler master post edit a = (ToMasterRoute PKCloudBlogApp master, HandlerSite IO ~ master, PKCloudBlog master post edit) => HandlerT PKCloudBlogApp (HandlerT master IO) a
-type Handler master post edit a = (ToMasterRoute PKCloudBlogApp master, PKCloudBlog master post edit) => HandlerT PKCloudBlogApp (HandlerT master IO) a
+type Handler master post a = (ToMasterRoute PKCloudBlogApp master, PKCloudBlog master post) => HandlerT PKCloudBlogApp (HandlerT master IO) a
 -- type Handler master post edit a = (ToMasterRoute PKCloudBlogApp master, HandlerSite IO ~ master, PKCloudBlog master post edit) => HandlerT PKCloudBlogApp (HandlerT master IO) a
 
 -- type Widget master post edit = (PKCloudBlog master post edit) => WidgetT PKCloudBlogApp (HandlerT master IO) ()

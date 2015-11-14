@@ -4,7 +4,7 @@ import Import
 
 import qualified Data.List as List
 
-getPostsHelper :: forall site post edit . Int64 -> Handler site post edit Html
+getPostsHelper :: forall site post . Int64 -> Handler site post Html
 -- getPostsHelper :: forall site . (PKCloudBlog site, GeneralPersistSql site (HandlerT site IO)) => Int64 -> HandlerT PKCloudBlogApp (HandlerT site IO) Html
 getPostsHelper page | page < 1 = getPostsHelper 1
 getPostsHelper page = lift $ do
@@ -55,29 +55,29 @@ getPostsHelper page = lift $ do
         qOffset = (page - 1) * postsPerPage
 
         displayPreview :: Entity post -> WidgetT site IO ()
-        displayPreview (Entity postId post) = do
-            -- Get latest edit.
-            editL <- handlerToWidget $ runDB' $ select $ from $ \e -> do
-                where_ (e ^. pkPostEditPostField ==. val postId &&. e ^. pkPostEditPublishedField ==. val True)
-                limit 1
-                orderBy [desc (e ^. pkPostEditDateField)]
-                return e
+        displayPreview (Entity _ post) = do
+            -- -- Get latest edit.
+            -- editL <- handlerToWidget $ runDB' $ select $ from $ \e -> do
+            --     where_ (e ^. pkPostEditPostField ==. val postId &&. e ^. pkPostEditPublishedField ==. val True)
+            --     limit 1
+            --     orderBy [desc (e ^. pkPostEditDateField)]
+            --     return e
 
-            case editL of
-                [Entity _editId edit] -> do
+            -- case editL of
+            --     [Entity _editId edit] -> do
 
-                    [whamlet|
-                        <div>
-                            <h5>
-                                #{pkPostEditTitle edit}
-                                <small>
-                                    Date?? 
-                            <hr>
-                            <div>
-                                link: #{pkPostLink post}
-                    |]
-                _ ->
-                    mempty
+            [whamlet|
+                <div>
+                    <h5>
+                        #{pkPostTitle post}
+                        <small>
+                            Date?? 
+                    <hr>
+                    <div>
+                        link: #{pkPostLink post}
+            |]
+            --     _ ->
+            --         mempty
 -- #{pkPostDate post}
         -- displayPreview (Value (Entity _postId post), Value (Entity _editId _edit)) = do
         --     [whamlet|
@@ -85,8 +85,8 @@ getPostsHelper page = lift $ do
         --             #{pkPostLink post}
         --     |]
 
-getPKCloudBlogPostsR :: Handler site post edit Html
+getPKCloudBlogPostsR :: Handler site post Html
 getPKCloudBlogPostsR = getPostsHelper 1
 
-getPKCloudBlogPostsPageR :: Int64 -> Handler site post edit Html
+getPKCloudBlogPostsPageR :: Int64 -> Handler site post Html
 getPKCloudBlogPostsPageR = getPostsHelper

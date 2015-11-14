@@ -2,5 +2,5 @@ module PKCloud.Blog.Handler.Root where
 
 import Import
 
-getPKCloudBlogRootR :: Handler site post edit Html
+getPKCloudBlogRootR :: Handler site post Html
 getPKCloudBlogRootR = redirect PKCloudBlogPostsR
