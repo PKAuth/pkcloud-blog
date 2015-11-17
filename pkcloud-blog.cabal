@@ -32,6 +32,7 @@ library
                      , persistent
                      , pkcloud-core
                      , shakespeare
+                     , text
   default-language:    Haskell2010
   default-extensions:  RankNTypes, FlexibleContexts, TemplateHaskell, QuasiQuotes, TypeFamilies, OverloadedStrings, FlexibleInstances, MultiParamTypeClasses, ScopedTypeVariables, FunctionalDependencies, ViewPatterns, ImpredicativeTypes
   ghc-options:         -Werror -Wall -fno-warn-orphans -fno-warn-type-defaults -fno-warn-name-shadowing

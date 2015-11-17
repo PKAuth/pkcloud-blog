@@ -2,6 +2,8 @@ module PKCloud.Blog.Handler.New (getPKCloudBlogNewR, postPKCloudBlogNewR) where
 
 import Import
 
+import qualified Data.List as List
+import qualified Data.Text as Text
 import Text.Julius (rawJS)
 
 data FormData = FormData {
@@ -106,15 +108,15 @@ postPKCloudBlogNewR = do
     ((result, formW), formE) <- lift $ runFormPost renderNewForm
     case result of
         FormMissing -> do
-            setMessageDanger "Creating post failed."
+            lift $ pkcloudSetMessageDanger "Creating post failed."
             generateHTML (formW, formE)
         FormFailure _msg -> do
-            setMessageDanger "Creating post failed."
+            lift $ pkcloudSetMessageDanger "Creating post failed."
             generateHTML (formW, formE)
         FormSuccess (FormData title slug content' published) -> do
             -- Create post.
             let content = unTextarea content'
-            let preview = undefined
+            let preview = toPreview content
             now <- getCurrentTime
             let post :: post = pkPost userId slug now published title content preview Nothing
 
@@ -127,14 +129,26 @@ postPKCloudBlogNewR = do
             lift $ runDB' $ insert_ post
 
             -- Set message.
-            setMessageSuccess "Successfully created post!"
+            lift $ pkcloudSetMessageSuccess "Successfully created post!"
 
             -- Redirect to post's edit page. 
             redirect $ PKCloudBlogEditR slug
 
     where
-        setMessageSuccess :: Text -> m ()
-        setMessageSuccess = undefined
-        setMessageDanger :: Text -> m ()
-        setMessageDanger = undefined
+        -- Grab the first paragraph as a preview. 
+        toPreview orig = 
+            -- Split into lines.
+            let lines' = Text.lines orig in
+            
+            -- Pull out any leading empty lines. 
+            let lines = List.dropWhile isEmpty lines' in
+
+            -- Grab the first paragraph. 
+            let preview = List.takeWhile (not . isEmpty) lines in
+
+            -- Join preview lines. 
+            Text.unlines preview
+
+        isEmpty t = "" == Text.strip t
+
 
