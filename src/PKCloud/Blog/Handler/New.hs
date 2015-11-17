@@ -121,7 +121,7 @@ postPKCloudBlogNewR = do
             let post :: post = pkPost userId slug now published title content preview Nothing
 
             -- Check if user can create posts. 
-            hasPermission <- canCreate post
+            hasPermission <- pkcloudCanCreate post
             when (not hasPermission) $ 
                 lift $ permissionDenied "You do not have permission to do that."
 

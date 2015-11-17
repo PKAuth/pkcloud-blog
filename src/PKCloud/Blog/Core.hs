@@ -14,7 +14,7 @@ type PostContent = Text
 type PostPublished = Bool
 -- type PostEditPublished = Bool
 
-class (SubEntity post, SecurityPermissions post, PKCloud master) => PKCloudBlog master post | master -> post, post -> master where
+class (SubEntity post, PKCloudSecurityPermissions post, PKCloud master) => PKCloudBlog master post | master -> post, post -> master where
     -- | Post datatype and getters.
     -- data PKPost master
     pkPost :: AuthId master -> PostLink -> UTCTime -> PostPublished -> PostTitle -> PostContent -> PostPreview -> Maybe UTCTime -> post
