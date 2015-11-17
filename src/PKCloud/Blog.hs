@@ -9,9 +9,12 @@ module PKCloud.Blog (
 
 import PKCloud.Import
 
+import PKCloud.Blog.Handler.Edit
+import PKCloud.Blog.Handler.Edits
+import PKCloud.Blog.Handler.New
+import PKCloud.Blog.Handler.Post
 import PKCloud.Blog.Handler.Posts
 import PKCloud.Blog.Handler.Root
-import PKCloud.Blog.Handler.New
 
 import PKCloud.Blog.Core as Export
 import PKCloud.Blog.Routes as Export

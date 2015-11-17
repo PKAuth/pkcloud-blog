@@ -11,7 +11,10 @@ mkYesodSubData "PKCloudBlogApp" [parseRoutes|
 / PKCloudBlogRootR GET
 /posts PKCloudBlogPostsR GET
 /posts/#Int64 PKCloudBlogPostsPageR GET
+/post/#Text PKCloudBlogPostR GET
 /new PKCloudBlogNewR GET POST
+/edits PKCloudBlogEditsR GET
+/edit/#Text PKCloudBlogEditR GET POST
 |]
 
 -- routes

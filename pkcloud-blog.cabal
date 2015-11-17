@@ -20,9 +20,12 @@ library
                        Import
                        PKCloud.Blog.Core
                        PKCloud.Blog.Routes
-                       PKCloud.Blog.Handler.Root
+                       PKCloud.Blog.Handler.Edit
+                       PKCloud.Blog.Handler.Edits
                        PKCloud.Blog.Handler.New
+                       PKCloud.Blog.Handler.Post
                        PKCloud.Blog.Handler.Posts
+                       PKCloud.Blog.Handler.Root
   build-depends:       base >= 4.7 && < 5
                      , blaze-markup
                      , esqueleto

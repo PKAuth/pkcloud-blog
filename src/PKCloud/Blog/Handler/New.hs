@@ -91,12 +91,50 @@ renderNewForm markup = do
 getPKCloudBlogNewR :: Handler site post Html
 getPKCloudBlogNewR = do
     -- TODO: Check if user can create posts. XXX
+    --      requireauth..
     -- Generate form widget.
     form <- lift $ generateFormPost renderNewForm
     
     -- Generate html.
     generateHTML form
 
-postPKCloudBlogNewR :: Handler site post Html
-postPKCloudBlogNewR = undefined
-    -- TODO: Check if user can create posts. XXX
+postPKCloudBlogNewR :: forall site post . Handler site post Html
+postPKCloudBlogNewR = do
+    userId :: AuthId site <- lift requireAuthId
+
+    -- Parse POST.
+    ((result, formW), formE) <- lift $ runFormPost renderNewForm
+    case result of
+        FormMissing -> do
+            setMessageDanger "Creating post failed."
+            generateHTML (formW, formE)
+        FormFailure _msg -> do
+            setMessageDanger "Creating post failed."
+            generateHTML (formW, formE)
+        FormSuccess (FormData title slug content' published) -> do
+            -- Create post.
+            let content = unTextarea content'
+            let preview = undefined
+            now <- getCurrentTime
+            let post :: post = pkPost userId slug now published title content preview Nothing
+
+            -- Check if user can create posts. 
+            hasPermission <- canCreate post
+            when (not hasPermission) $ 
+                lift $ permissionDenied "You do not have permission to do that."
+
+            -- Insert post.
+            lift $ runDB' $ insert_ post
+
+            -- Set message.
+            setMessageSuccess "Successfully created post!"
+
+            -- Redirect to post's edit page. 
+            redirect $ PKCloudBlogEditR slug
+
+    where
+        setMessageSuccess :: Text -> m ()
+        setMessageSuccess = undefined
+        setMessageDanger :: Text -> m ()
+        setMessageDanger = undefined
+
