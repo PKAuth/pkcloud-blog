@@ -25,6 +25,7 @@ class (SubEntity post, PKCloudSecurityPermissions master post, PKCloud master) =
     pkPostAuthor :: post -> AuthId master
     -- pkPostTitle :: post -> PostTitle
     pkPostLink :: post -> PostLink
+    pkPostUniqueLink :: PostLink -> Unique post
     pkPostDate :: post -> UTCTime
     pkPostDateField :: EntityField post UTCTime
     pkPostPublished :: post -> PostPublished
@@ -36,6 +37,8 @@ class (SubEntity post, PKCloudSecurityPermissions master post, PKCloud master) =
     pkPostPreview :: post -> PostPreview
     pkPostEditDate :: post -> Maybe UTCTime
     pkPostEditDateField :: EntityField post (Maybe UTCTime)
+
+    pkBlogAuthorRoute :: Text -> Route master
 
     -- | Post edit datatype and getters.
     -- data PKPostEdit master
@@ -64,7 +67,7 @@ pkBlogRetrievePosts n = do
     runDB' $ select $ from $ \p -> do
         where_ (p ^. pkPostPublishedField ==. val True)
         limit (fromInteger $ toInteger n)
-        orderBy [desc (p ^. pkPostPublishedField)]
+        orderBy [desc (p ^. pkPostDateField)]
         return p
 
 -- | Note: Move to Import.Internal??

@@ -17,14 +17,17 @@ generateHTML :: forall site post . (MasterWidget site, Enctype) -> Handler site 
 generateHTML (formW, formEnc) = lift $ pkcloudDefaultLayout $ do
     pkcloudSetTitle "New post"
     [whamlet|
-        <form role=form method=post action="@{toMasterRoute PKCloudBlogNewR}" enctype=#{formEnc}>
-            ^{formW}
-            <div .form-group .optional .pull-right>
-                <button name="preview" .btn .btn-default>
-                    Preview
-                <button type="submit" name="create" .btn .btn-primary>
-                    Create
-            <div .clearfix>
+        <div .container>
+            <div .row>
+                <div .col-sm-12>
+                    <form role=form method=post action="@{toMasterRoute PKCloudBlogNewR}" enctype=#{formEnc}>
+                        ^{formW}
+                        <div .form-group .optional .pull-right>
+                            <button name="preview" .btn .btn-default>
+                                Preview
+                            <button type="submit" name="create" .btn .btn-primary>
+                                Create
+                        <div .clearfix>
     |]
 
 renderNewForm :: MasterForm FormData
@@ -143,11 +146,18 @@ postPKCloudBlogNewR = do
             -- Pull out any leading empty lines. 
             let lines = List.dropWhile isEmpty lines' in
 
-            -- Grab the first paragraph. 
-            let preview = List.takeWhile (not . isEmpty) lines in
+            -- Grab the first three paragraphs.
+            let preview = toPreviewHelper 3 lines in
 
             -- Join preview lines. 
             Text.unlines preview
+
+        toPreviewHelper :: Int -> [Text] -> [Text]
+        toPreviewHelper 1 lines = List.takeWhile (not . isEmpty) lines
+        toPreviewHelper c lines = 
+            let (para, rest') = List.span (not . isEmpty) lines in
+            let (spaces, rest) = List.span isEmpty rest' in
+            para ++ spaces ++ toPreviewHelper (c - 1) rest
 
         isEmpty t = "" == Text.strip t
 

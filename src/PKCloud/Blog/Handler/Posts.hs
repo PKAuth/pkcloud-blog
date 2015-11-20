@@ -32,7 +32,10 @@ getPostsHelper page = lift $ do
             [] -> 
                 if page == 1 then
                     [whamlet|
-                        There are no posts yet. Check back later!
+                        <div .container>
+                            <div .row>
+                                <div .col-sm-12>
+                                    There are no posts yet. Check back later!
                     |]
                 else
                     notFound
@@ -41,16 +44,16 @@ getPostsHelper page = lift $ do
                 let postsW = mconcat $ map displayPreview $ List.take postsPerPage' posts
 
                 [whamlet|
-                    ^{postsW}
-                    ^{navigationW page posts}
+                    <div .container>
+                        ^{postsW}
+                        <div .row>
+                            <div .col-sm-12>
+                                ^{navigationW page posts}
                 |]
                 -- Display next/previous buttons.
 
     where 
         wrap w = [whamlet|
-                <div .container>
-                    <div .row>
-                        <div .col-md-offset-2 .col-md-8>
                             ^{w}
             |]
         postsPerPage :: Int64
@@ -94,6 +97,21 @@ getPostsHelper page = lift $ do
                                         Newer
                         |]
 
+            toWidget [lucius|
+                .blog-title {
+                    margin-bottom: 3px;
+                }
+
+                .blog-title a {
+                    color: rgb(51, 51, 51);
+                }
+
+                .blog-content {
+                    margin-top: 15px;
+                    margin-bottom: 35px;
+                }
+            |]
+
             [whamlet|
                 <div>
                     ^{newer}
@@ -114,33 +132,21 @@ getPostsHelper page = lift $ do
             --     [Entity _editId edit] -> do
 
             author <- handlerToWidget $ pkcloudDisplayName $ pkPostAuthor post
+            authorIdent <- handlerToWidget $ pkcloudUniqueUsername $ pkPostAuthor post
             let postRoute = toMasterRoute $ PKCloudBlogPostR $ pkPostLink post
-            toWidget [lucius|
-                .blog-title h4 {
-                    margin-bottom: 3px;
-                }
-
-                .blog-title a {
-                    color: rgb(51, 51, 51);
-                }
-
-                .blog-content {
-                    margin-top: 10px;
-                    margin-bottom: 35px;
-                }
-            |]
             [whamlet|
-                <div>
-                    <h4 .blog-title>
-                        <a href="@{postRoute}">
-                            #{pkPostTitle post}
-                    <div .text-muted>
-                        by <a href="TODO">#{author}</a> - #{renderDayLong $ pkPostDate post}
-                    <div .blog-content>
-                        #{renderBlogContent $ pkPostPreview post}
-                        <p>
+                <div .row>
+                    <div .col-sm-12>
+                        <h3 .blog-title>
                             <a href="@{postRoute}">
-                                Continue reading...
+                                #{pkPostTitle post}
+                        <div .text-muted>
+                            By <a href="@{pkBlogAuthorRoute authorIdent}">#{author}</a> - #{renderDayLong $ pkPostDate post}
+                        <div .blog-content>
+                            #{renderBlogContent $ pkPostPreview post}
+                            <p>
+                                <a href="@{postRoute}">
+                                    Continue reading...
             |]
             --     _ ->
             --         mempty

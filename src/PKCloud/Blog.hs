@@ -9,6 +9,7 @@ module PKCloud.Blog (
 
 import PKCloud.Import
 
+import PKCloud.Blog.Handler.Author
 import PKCloud.Blog.Handler.Edit
 import PKCloud.Blog.Handler.Edits
 import PKCloud.Blog.Handler.New

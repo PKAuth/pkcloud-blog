@@ -20,6 +20,7 @@ library
                        Import
                        PKCloud.Blog.Core
                        PKCloud.Blog.Routes
+                       PKCloud.Blog.Handler.Author
                        PKCloud.Blog.Handler.Edit
                        PKCloud.Blog.Handler.Edits
                        PKCloud.Blog.Handler.New
