@@ -1,6 +1,9 @@
 module PKCloud.Blog.Core where
 
 -- import Control.Monad
+import qualified Data.Text.Lazy as TextL
+import qualified Data.Time.Format as Time
+import qualified Text.Markdown as Markdown
 
 import PKCloud.Import
 
@@ -14,7 +17,7 @@ type PostContent = Text
 type PostPublished = Bool
 -- type PostEditPublished = Bool
 
-class (SubEntity post, PKCloudSecurityPermissions post, PKCloud master) => PKCloudBlog master post | master -> post, post -> master where
+class (SubEntity post, PKCloudSecurityPermissions master post, PKCloud master) => PKCloudBlog master post | master -> post, post -> master where
     -- | Post datatype and getters.
     -- data PKPost master
     pkPost :: AuthId master -> PostLink -> UTCTime -> PostPublished -> PostTitle -> PostContent -> PostPreview -> Maybe UTCTime -> post
@@ -23,6 +26,7 @@ class (SubEntity post, PKCloudSecurityPermissions post, PKCloud master) => PKClo
     -- pkPostTitle :: post -> PostTitle
     pkPostLink :: post -> PostLink
     pkPostDate :: post -> UTCTime
+    pkPostDateField :: EntityField post UTCTime
     pkPostPublished :: post -> PostPublished
     pkPostPublishedField :: EntityField (post) PostPublished
 
@@ -78,3 +82,9 @@ pkBlogRetrievePosts n = do
     --         _ ->
     --             return acc
     --   ) [] posts
+
+renderBlogContent :: Text -> Html
+renderBlogContent = Markdown.markdown Markdown.def . TextL.fromStrict
+
+renderDayLong :: UTCTime -> String
+renderDayLong = Time.formatTime Time.defaultTimeLocale "%B %e, %Y"

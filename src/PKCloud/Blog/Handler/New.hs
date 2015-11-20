@@ -58,7 +58,7 @@ renderNewForm markup = do
         titleSettings = withAutofocus $ withPlaceholder "Title" $ 
             bfs ("Title" :: Text)
 
-        slugSettings = disable $ withPlaceholder "Permalink" $ 
+        slugSettings = readonly $ withPlaceholder "Permalink" $ 
             bfs ("Permalink" :: Text)
 
         contentSettings = withAttr ("rows","10") $ withPlaceholder "Content" $ 
@@ -72,9 +72,9 @@ renderNewForm markup = do
             let oldS = fsAttrs setting in
             setting {fsAttrs = a:oldS}
 
-        disable setting = 
+        readonly setting = 
             let attrs = fsAttrs setting in
-            setting {fsAttrs = ("disabled","disabled"):attrs}
+            setting {fsAttrs = ("readonly","readonly"):attrs}
 
         -- https://gist.github.com/carymrobbins/590515bb8dfb48573527
         -- bootstrapCheckBoxField :: (ToMarkup a, RenderMessage (HandlerSite m) FormMessage, Monad m) => a -> Field m Bool
@@ -121,7 +121,7 @@ postPKCloudBlogNewR = do
             let post :: post = pkPost userId slug now published title content preview Nothing
 
             -- Check if user can create posts. 
-            hasPermission <- pkcloudCanCreate post
+            hasPermission <- lift $ pkcloudCanCreate post
             when (not hasPermission) $ 
                 lift $ permissionDenied "You do not have permission to do that."
 

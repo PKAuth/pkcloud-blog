@@ -23,12 +23,12 @@ getPostsHelper page = lift $ do
         where_ (p ^. pkPostPublishedField ==. val True)
         limit qLimit
         offset qOffset
-        orderBy [desc (p ^. pkPostPublishedField)]
+        orderBy [desc (p ^. pkPostDateField)]
         return p
 
     pkcloudDefaultLayout $ do
         pkcloudSetTitle "Posts"
-        case posts of
+        wrap $ case posts of
             [] -> 
                 if page == 1 then
                     [whamlet|
@@ -42,17 +42,64 @@ getPostsHelper page = lift $ do
 
                 [whamlet|
                     ^{postsW}
-                    TODO
+                    ^{navigationW page posts}
                 |]
                 -- Display next/previous buttons.
 
     where 
+        wrap w = [whamlet|
+                <div .container>
+                    <div .row>
+                        <div .col-md-offset-2 .col-md-8>
+                            ^{w}
+            |]
         postsPerPage :: Int64
         postsPerPage = 10
         postsPerPage' :: Int
         postsPerPage' = fromInteger $ toInteger postsPerPage
         qLimit = postsPerPage + 1
+        qLimit' = postsPerPage' + 1
         qOffset = (page - 1) * postsPerPage
+
+        navigationW :: Int64 -> [a] -> WidgetT site IO ()
+        navigationW page l = do
+            -- Check if we should display the older button.
+            let masterPostsRoute = toMasterRoute . PKCloudBlogPostsPageR
+            let older = if List.length l == qLimit' then
+                    [whamlet|
+                        <ul .nav .nav-pills .pull-right>
+                            <li role="presentation">
+                                <a href="@{masterPostsRoute (page + 1)}">
+                                    Older
+                    |]
+                  else
+                    mempty
+
+            -- Check if we should display the newer button.
+            let newer = case page of
+                    2 ->
+                        [whamlet|
+                            <ul .nav .nav-pills>
+                                <li role="presentation">
+                                    <a href="@{toMasterRoute PKCloudBlogPostsR}">
+                                        Newer
+                        |]
+                    1 -> 
+                        mempty
+                    _ ->
+                        [whamlet|
+                            <ul .nav .nav-pills>
+                                <li role="presentation">
+                                    <a href="@{masterPostsRoute (page - 1)}">
+                                        Newer
+                        |]
+
+            [whamlet|
+                <div>
+                    ^{newer}
+                    ^{older}
+                <div .clearfix>
+            |]
 
         displayPreview :: Entity post -> WidgetT site IO ()
         displayPreview (Entity _ post) = do
@@ -66,15 +113,34 @@ getPostsHelper page = lift $ do
             -- case editL of
             --     [Entity _editId edit] -> do
 
+            author <- handlerToWidget $ pkcloudDisplayName $ pkPostAuthor post
+            let postRoute = toMasterRoute $ PKCloudBlogPostR $ pkPostLink post
+            toWidget [lucius|
+                .blog-title h4 {
+                    margin-bottom: 3px;
+                }
+
+                .blog-title a {
+                    color: rgb(51, 51, 51);
+                }
+
+                .blog-content {
+                    margin-top: 10px;
+                    margin-bottom: 35px;
+                }
+            |]
             [whamlet|
                 <div>
-                    <h5>
-                        #{pkPostTitle post}
-                        <small>
-                            Date?? 
-                    <hr>
-                    <div>
-                        link: #{pkPostLink post}
+                    <h4 .blog-title>
+                        <a href="@{postRoute}">
+                            #{pkPostTitle post}
+                    <div .text-muted>
+                        by <a href="TODO">#{author}</a> - #{renderDayLong $ pkPostDate post}
+                    <div .blog-content>
+                        #{renderBlogContent $ pkPostPreview post}
+                        <p>
+                            <a href="@{postRoute}">
+                                Continue reading...
             |]
             --     _ ->
             --         mempty
