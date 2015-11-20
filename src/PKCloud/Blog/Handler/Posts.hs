@@ -53,7 +53,7 @@ getPostsHelper page = do
                             <div .col-sm-8>
                                 ^{postsW}
                                 ^{navigationW page posts}
-                            <div .col-sm-4 .col-sm-offset-8>
+                            <div .col-sm-4>
                                 ^{sidebarW userM}
                 |]
                 -- Display next/previous buttons.
