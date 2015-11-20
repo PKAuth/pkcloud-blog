@@ -6,6 +6,7 @@ module Import (
 --     , Widget
     , MasterWidget
     , MasterForm
+    , maybeBlogUserId
     ) where
 
 import Control.Monad as Export (when)
@@ -21,11 +22,25 @@ type MasterForm a = forall site . (RenderMessage site FormMessage) => Markup -> 
 
 
 
--- type Handler master post edit a = (ToMasterRoute PKCloudBlogApp master, HandlerSite IO ~ master, PKCloudBlog master post edit) => HandlerT PKCloudBlogApp (HandlerT master IO) a
+-- type Handler master post a = (ToMasterRoute PKCloudBlogApp master, PKCloudBlog master post) => HandlerT PKCloudBlogApp (HandlerT master IO) a
 type Handler master post a = (ToMasterRoute PKCloudBlogApp master, PKCloudBlog master post) => HandlerT PKCloudBlogApp (HandlerT master IO) a
--- type Handler master post edit a = (ToMasterRoute PKCloudBlogApp master, HandlerSite IO ~ master, PKCloudBlog master post edit) => HandlerT PKCloudBlogApp (HandlerT master IO) a
+
 
 -- type Widget master post edit = (PKCloudBlog master post edit) => WidgetT PKCloudBlogApp (HandlerT master IO) ()
 -- type MasterWidget master = forall post edit . (PKCloudBlog master post edit) => WidgetT master IO ()
 type MasterWidget master = WidgetT master IO ()
+
+maybeBlogUserId :: forall site post . Handler site post (Maybe (AuthId site))
+maybeBlogUserId = do
+    userM <- lift maybeAuthId
+    case userM of
+        Nothing ->
+            return Nothing
+        Just userId -> do
+            app <- getYesod
+            appEnabled <- lift $ pkcloudAppEnabled app userId
+            if appEnabled then
+                return $ Just userId
+            else
+                return Nothing
 

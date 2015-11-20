@@ -91,3 +91,8 @@ renderBlogContent = Markdown.markdown Markdown.def . TextL.fromStrict
 
 renderDayLong :: UTCTime -> String
 renderDayLong = Time.formatTime Time.defaultTimeLocale "%B %e, %Y"
+
+instance PKCloudApp PKCloudBlogApp where
+    pkcloudAppName PKCloudBlogApp = "Blog"
+    pkcloudAppIdentifier PKCloudBlogApp = "blog"
+

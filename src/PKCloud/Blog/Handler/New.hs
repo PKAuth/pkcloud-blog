@@ -95,17 +95,29 @@ renderNewForm markup = do
 
 getPKCloudBlogNewR :: Handler site post Html
 getPKCloudBlogNewR = do
-    -- TODO: Check if user can create posts. XXX
-    --      requireauth..
+    -- Check if user can create posts.
+    _ <- requireBlogUserId
+
     -- Generate form widget.
     form <- lift $ generateFormPost renderNewForm
     
     -- Generate html.
     generateHTML form
 
+requireBlogUserId :: forall site post . Handler site post (AuthId site)
+requireBlogUserId = do
+    userId :: AuthId site <- lift requireAuthId
+
+    app <- getYesod
+    appEnabled <- lift $ pkcloudAppEnabled app userId
+    when (not appEnabled) $
+        permissionDenied "You do not have permission to create blog posts. Try enabling the PKCloud blog app."
+
+    return userId
+
 postPKCloudBlogNewR :: forall site post . Handler site post Html
 postPKCloudBlogNewR = do
-    userId :: AuthId site <- lift requireAuthId
+    userId <- requireBlogUserId
 
     -- Parse POST.
     ((result, formW), formE) <- lift $ runFormPost renderNewForm

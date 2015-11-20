@@ -7,7 +7,7 @@ import qualified Data.List as List
 getPostsHelper :: forall site post . Int64 -> Handler site post Html
 -- getPostsHelper :: forall site . (PKCloudBlog site, GeneralPersistSql site (HandlerT site IO)) => Int64 -> HandlerT PKCloudBlogApp (HandlerT site IO) Html
 getPostsHelper page | page < 1 = getPostsHelper 1
-getPostsHelper page = lift $ do
+getPostsHelper page = do
     -- Get 11 posts. 
     -- posts :: ([Entity (PKPost site)]) <- runDB $ select $ from $ \(InnerJoin p (LeftOuterJoin pe pe')) -> do
     -- posts <- runDB $ select $ from $ \(InnerJoin p (LeftOuterJoin pe (pe' :: SqlExpr (Maybe (Entity (PKPost site)))))) -> do
@@ -19,23 +19,27 @@ getPostsHelper page = lift $ do
     --     offset qOffset
     --     return (p, pe)
 
-    posts <- runDB' $ select $ from $ \p -> do
+    posts <- lift $ runDB' $ select $ from $ \p -> do
         where_ (p ^. pkPostPublishedField ==. val True)
         limit qLimit
         offset qOffset
         orderBy [desc (p ^. pkPostDateField)]
         return p
 
-    pkcloudDefaultLayout $ do
+    userM <- maybeBlogUserId
+
+    lift $ pkcloudDefaultLayout $ do
         pkcloudSetTitle "Posts"
-        wrap $ case posts of
+        case posts of
             [] -> 
                 if page == 1 then
                     [whamlet|
                         <div .container>
                             <div .row>
-                                <div .col-sm-12>
+                                <div .col-sm-8>
                                     There are no posts yet. Check back later!
+                                <div .col-sm-4>
+                                    ^{sidebarW userM}
                     |]
                 else
                     notFound
@@ -45,17 +49,16 @@ getPostsHelper page = lift $ do
 
                 [whamlet|
                     <div .container>
-                        ^{postsW}
                         <div .row>
-                            <div .col-sm-12>
+                            <div .col-sm-8>
+                                ^{postsW}
                                 ^{navigationW page posts}
+                            <div .col-sm-4 .col-sm-offset-8>
+                                ^{sidebarW userM}
                 |]
                 -- Display next/previous buttons.
 
     where 
-        wrap w = [whamlet|
-                            ^{w}
-            |]
         postsPerPage :: Int64
         postsPerPage = 10
         postsPerPage' :: Int
@@ -63,6 +66,24 @@ getPostsHelper page = lift $ do
         qLimit = postsPerPage + 1
         qLimit' = postsPerPage' + 1
         qOffset = (page - 1) * postsPerPage
+
+        sidebarW :: Maybe (AuthId site) -> WidgetT site IO ()
+        sidebarW userM = do
+            let adminW = case userM of
+                    Nothing -> 
+                        mempty
+                    Just _ -> 
+                            -- <div .panel .panel-default>
+                            --     <div .panel-body>
+                        [whamlet|
+                            <div>
+                                <a .btn .btn-default .btn-lg .btn-block href="@{toMasterRoute PKCloudBlogNewR}">
+                                    New post
+                        |]
+            [whamlet|
+                ^{adminW}
+                This is a sidebar... Admin controls?? Tags?
+            |]
 
         navigationW :: Int64 -> [a] -> WidgetT site IO ()
         navigationW page l = do
@@ -135,18 +156,18 @@ getPostsHelper page = lift $ do
             authorIdent <- handlerToWidget $ pkcloudUniqueUsername $ pkPostAuthor post
             let postRoute = toMasterRoute $ PKCloudBlogPostR $ pkPostLink post
             [whamlet|
-                <div .row>
-                    <div .col-sm-12>
-                        <h3 .blog-title>
+                <div>
+                    <h3 .blog-title>
+                        <a href="@{postRoute}">
+                            #{pkPostTitle post}
+                    <div .text-muted>
+                        By <a href="@{pkBlogAuthorRoute authorIdent}">#{author}</a> - #{renderDayLong $ pkPostDate post}
+                    <div .blog-content>
+                        #{renderBlogContent $ pkPostPreview post}
+                        <p>
                             <a href="@{postRoute}">
-                                #{pkPostTitle post}
-                        <div .text-muted>
-                            By <a href="@{pkBlogAuthorRoute authorIdent}">#{author}</a> - #{renderDayLong $ pkPostDate post}
-                        <div .blog-content>
-                            #{renderBlogContent $ pkPostPreview post}
-                            <p>
-                                <a href="@{postRoute}">
-                                    Continue reading...
+                                Continue reading...
+                <div .clearfix>
             |]
             --     _ ->
             --         mempty
