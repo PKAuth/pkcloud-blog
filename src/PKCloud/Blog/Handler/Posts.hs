@@ -82,8 +82,8 @@ getPostsHelper page = do
                         |]
             [whamlet|
                 ^{adminW}
-                This is a sidebar... Admin controls?? Tags?
             |]
+            -- TODO: add more like tags? 
 
         navigationW :: Int64 -> [a] -> WidgetT site IO ()
         navigationW page l = do

@@ -28,12 +28,30 @@ getPKCloudBlogPostR slug = lift $ do
                 [whamlet|
                     <div .container>
                         <div .row>
-                            <div .col-sm-12>
+                            <div .col-sm-8>
                                 <h2 .blog-title>
                                     #{pkPostTitle post}
                                 <div .text-muted>
                                     By <a href="@{pkBlogAuthorRoute authorIdent}">#{authorName}</a> - #{renderDayLong $ pkPostDate post}
                                 <div .blog-content>
                                     #{renderBlogContent $ pkPostContent post}
+                            <div .col-sm-4>
+                                ^{sidebarW post}
                 |]
+
+    where
+        sidebarW post = do
+            -- Check if user can edit post. 
+            canEdit <- handlerToWidget $ pkcloudCanWrite post
+
+            if not canEdit then
+                mempty
+            else
+                [whamlet|
+                    <div>
+                        <a .btn .btn-default .btn-lg .btn-block href="@{toMasterRoute $ PKCloudBlogEditR $ pkPostLink post}">
+                            Edit post
+                |]
+
+            -- TODO: Other things in side bar? Recent posts? 
 
