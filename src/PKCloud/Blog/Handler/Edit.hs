@@ -5,10 +5,24 @@ import Import
 generateHTML :: forall site post . post -> (MasterWidget site, Enctype) -> Handler site post Html
 generateHTML post (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp $ do
     pkcloudSetTitle "Edit post"
+    deleteModalId <- newIdent
+    toWidget [lucius|
+        ##{deleteModalId}-dialog {
+            width: 40%;
+            min-width: 350px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        ##{deleteModalId}-footer {
+            text-align: right;
+            padding-top: 15px;
+        }
+    |]
     [whamlet|
         <div .container>
             <div .row>
-                <div .col-sm-12>
+                <div .col-sm-8>
                     <form role=form method=post action="@{toMasterRoute $ PKCloudBlogEditR $ pkPostLink post}" enctype=#{formEnc}>
                         ^{formW}
                         <div .form-group .optional .pull-right>
@@ -17,7 +31,20 @@ generateHTML post (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp 
                             <button type="submit" name="update" .btn .btn-primary>
                                 Update
                         <div .clearfix>
-    
+                <div .col-sm-4>
+                    <button .btn .btn-danger .btn-lg .btn-block data-toggle="modal" data-target="##{deleteModalId}">
+                        Delete
+        <div .modal .fade tabindex="-1" role="dialog" id="#{deleteModalId}">
+            <div .modal-dialog ##{deleteModalId}-dialog>
+                <div .modal-content>
+                    <div .modal-body>
+                        <h5>
+                            Are you sure you want to delete this post?
+                        <div ##{deleteModalId}-footer>
+                            <button type="button" .btn .btn-default data-dismiss="modal">
+                                Cancel
+                            <button type="button" .btn .btn-danger>
+                                Delete
     |]
 
 data FormData = FormData {
