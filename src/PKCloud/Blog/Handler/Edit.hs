@@ -19,6 +19,14 @@ generateHTML post (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp 
             padding-top: 15px;
         }
     |]
+    let postLinkW = 
+            if pkPostPublished post then
+                [whamlet|
+                    <a .btn .btn-default .btn-lg .btn-block href="@{toMasterRoute $ PKCloudBlogPostR $ pkPostLink post}">
+                        View post
+                |]
+            else
+                mempty
     [whamlet|
         <div .container>
             <div .row>
@@ -34,6 +42,7 @@ generateHTML post (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp 
                 <div .col-sm-4>
                     <button .btn .btn-danger .btn-lg .btn-block data-toggle="modal" data-target="##{deleteModalId}">
                         Delete
+                    ^{postLinkW}
         <div .modal .fade tabindex="-1" role="dialog" id="#{deleteModalId}">
             <div .modal-dialog ##{deleteModalId}-dialog>
                 <div .modal-content>

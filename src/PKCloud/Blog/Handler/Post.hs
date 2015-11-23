@@ -9,7 +9,11 @@ getPKCloudBlogPostR slug = lift $ do
     case postM of
         Nothing ->
             notFound
-        Just (Entity _ post) ->
+        Just (Entity _ post) -> do
+            -- Check if not published.
+            when (not $ pkPostPublished post) 
+                notFound
+
             pkcloudDefaultLayout PKCloudBlogApp $ do
                 pkcloudSetTitle $ toHtml $ pkPostTitle post
                 let author :: AuthId site = pkPostAuthor post
