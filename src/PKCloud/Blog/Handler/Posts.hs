@@ -28,7 +28,7 @@ getPostsHelper page = do
 
     userM <- maybeBlogUserId
 
-    lift $ pkcloudDefaultLayout $ do
+    lift $ pkcloudDefaultLayout PKCloudBlogApp $ do
         pkcloudSetTitle "Posts"
         case posts of
             [] -> 

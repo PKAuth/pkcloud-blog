@@ -10,7 +10,7 @@ getPKCloudBlogPostR slug = lift $ do
         Nothing ->
             notFound
         Just (Entity _ post) ->
-            pkcloudDefaultLayout $ do
+            pkcloudDefaultLayout PKCloudBlogApp $ do
                 pkcloudSetTitle $ toHtml $ pkPostTitle post
                 let author :: AuthId site = pkPostAuthor post
                 authorName <- handlerToWidget $ pkcloudDisplayName author

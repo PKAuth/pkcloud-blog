@@ -3,7 +3,7 @@ module PKCloud.Blog.Handler.Edit where
 import Import
 
 generateHTML :: forall site post . post -> (MasterWidget site, Enctype) -> Handler site post Html
-generateHTML post (formW, formEnc) = lift $ pkcloudDefaultLayout $ do
+generateHTML post (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp $ do
     pkcloudSetTitle "Edit post"
     [whamlet|
         <div .container>

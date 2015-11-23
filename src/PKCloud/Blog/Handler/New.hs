@@ -12,7 +12,7 @@ data FormData = FormData {
     }
 
 generateHTML :: forall site post . (MasterWidget site, Enctype) -> Handler site post Html
-generateHTML (formW, formEnc) = lift $ pkcloudDefaultLayout $ do
+generateHTML (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp $ do
     pkcloudSetTitle "New post"
     [whamlet|
         <div .container>
