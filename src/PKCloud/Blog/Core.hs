@@ -20,7 +20,7 @@ type PostPublished = Bool
 class (SubEntity post, SubEntity tag, PKCloudSecurityPermissions master post, PKCloud master) => PKCloudBlog master post tag | master -> post, post -> master, master -> tag, tag -> master where
     -- | Post datatype and getters.
     pkPost :: AuthId master -> PostLink -> UTCTime -> PostPublished -> PostTitle -> PostContent -> PostPreview -> Maybe UTCTime -> post
-    pkPostIdField :: EntityField (post) (Key (post))
+    pkPostIdField :: EntityField post (Key post)
     pkPostAuthor :: post -> AuthId master
     pkPostLink :: post -> PostLink
     pkPostUniqueLink :: PostLink -> Unique post
@@ -34,6 +34,12 @@ class (SubEntity post, SubEntity tag, PKCloudSecurityPermissions master post, PK
     pkPostPreview :: post -> PostPreview
     pkPostEditDate :: post -> Maybe UTCTime
     pkPostEditDateField :: EntityField post (Maybe UTCTime)
+
+    pkPostTag :: Key post -> Text -> tag
+    pkPostTagPost :: tag -> Key post
+    pkPostTagPostField :: EntityField tag (Key post)
+    pkPostTagTag :: tag -> Text
+    pkPostTagTagField :: EntityField tag Text
 
     -- | Route to link to from a author's name. 
     pkBlogAuthorRoute :: Text -> Route master
