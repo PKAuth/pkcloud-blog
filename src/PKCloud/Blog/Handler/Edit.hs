@@ -5,7 +5,12 @@ import Import
 generateHTML :: forall site post . post -> (MasterWidget site, Enctype) -> Handler site post Html
 generateHTML post (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp $ do
     pkcloudSetTitle "Edit post"
+
+    -- Make delete form.
+    (deleteW, deleteE) <- handlerToWidget $ generateFormPost renderDeleteForm
+
     deleteModalId <- newIdent
+    deleteFormId <- newIdent
     toWidget [lucius|
         ##{deleteModalId}-dialog {
             width: 40%;
@@ -18,6 +23,9 @@ generateHTML post (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp 
             text-align: right;
             padding-top: 15px;
         }
+        ##{deleteFormId} {
+            display: inline-block;
+        }
     |]
     let postLinkW = 
             if pkPostPublished post then
@@ -27,6 +35,7 @@ generateHTML post (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp 
                 |]
             else
                 mempty
+
     [whamlet|
         <div .container>
             <div .row>
@@ -52,8 +61,10 @@ generateHTML post (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp 
                         <div ##{deleteModalId}-footer>
                             <button type="button" .btn .btn-default data-dismiss="modal">
                                 Cancel
-                            <button type="button" .btn .btn-danger>
-                                Delete
+                            <form role=form method=post action="@{toMasterRoute $ PKCloudBlogDeleteR $ pkPostLink post}" enctype=#{deleteE} ##{deleteFormId}>
+                                ^{deleteW}
+                                <button type="submit" .btn .btn-danger>
+                                    Delete
     |]
 
 data FormData = FormData {
@@ -81,10 +92,10 @@ renderEditForm post = renderBootstrap3 BootstrapBasicForm $ FormData
             let oldS = fsAttrs setting in
             setting {fsAttrs = a:oldS}
 
+renderDeleteForm :: MasterForm ()
+renderDeleteForm = renderDivs $ pure ()
 
-    
-
-getPKCloudBlogEditR :: forall site post . Text -> Handler site post Html
+getPKCloudBlogEditR :: forall site post . PostLink -> Handler site post Html
 getPKCloudBlogEditR slug = do
     _ <- requireBlogUserId
 
@@ -105,7 +116,7 @@ getPKCloudBlogEditR slug = do
             -- Generate HTML.
             generateHTML post form
 
-postPKCloudBlogEditR :: forall site post . Text -> Handler site post Html
+postPKCloudBlogEditR :: forall site post . PostLink -> Handler site post Html
 postPKCloudBlogEditR slug = do
     _ <- requireBlogUserId
 
@@ -145,8 +156,37 @@ postPKCloudBlogEditR slug = do
                     -- Redirect.
                     redirect $ PKCloudBlogEditR slug
 
-
-
-
+-- Delete post handler.
+postPKCloudBlogDeleteR :: forall site post . PostLink -> Handler site post Html
+postPKCloudBlogDeleteR slug = do
+    _ <- requireBlogUserId
+    -- Lookup post.
+    postM :: Maybe (Entity post) <- lift $ runDB' $ getBy $ pkPostUniqueLink slug
+    case postM of
+        Nothing ->
+            lift notFound
+        Just (Entity postId post) -> do
+            -- Check if user can edit.
+            hasPermission <- lift $ pkcloudCanWrite post
+            when (not hasPermission) $ 
+                lift $ permissionDenied "You do not have permission to edit this post."
             
+            -- Parse form.
+            ((result, _), _) <- lift $ runFormPost renderDeleteForm
+            case result of
+                FormMissing -> do
+                    lift $ pkcloudSetMessageDanger "Deleting post failed."
+                    redirect $ PKCloudBlogEditR slug
+                FormFailure _msg -> do
+                    lift $ pkcloudSetMessageDanger "Deleting post failed."
+                    redirect $ PKCloudBlogEditR slug
+                FormSuccess () -> do
+                    -- Delete post.
+                    lift $ runDB' $ deleteKey postId
+
+                    -- Set message.
+                    lift $ pkcloudSetMessageSuccess "Successfully deleted post."
+
+                    -- Redirect to posts page.
+                    redirect PKCloudBlogPostsR
 
