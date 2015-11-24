@@ -2,7 +2,7 @@ module PKCloud.Blog.Handler.Edit where
 
 import Import
 
-generateHTML :: forall site post . post -> (MasterWidget site, Enctype) -> Handler site post Html
+generateHTML :: forall site post tag . post -> (MasterWidget site, Enctype) -> Handler site post tag Html
 generateHTML post (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp $ do
     pkcloudSetTitle "Edit post"
 
@@ -73,7 +73,7 @@ data FormData = FormData {
     , _formDataPublished :: PostPublished
     }
 
-renderEditForm :: forall site post . (PKCloudBlog site post) => post -> MasterForm FormData
+renderEditForm :: forall site post tag . (PKCloudBlog site post tag) => post -> MasterForm FormData
 renderEditForm post = renderBootstrap3 BootstrapBasicForm $ FormData
     <$> areq textField titleSettings ( Just $ pkPostTitle post)
     <*> areq textareaField contentSettings ( Just $ Textarea $ pkPostContent post)
@@ -95,7 +95,7 @@ renderEditForm post = renderBootstrap3 BootstrapBasicForm $ FormData
 renderDeleteForm :: MasterForm ()
 renderDeleteForm = renderDivs $ pure ()
 
-getPKCloudBlogEditR :: forall site post . PostLink -> Handler site post Html
+getPKCloudBlogEditR :: forall site post tag . PostLink -> Handler site post tag Html
 getPKCloudBlogEditR slug = do
     _ <- requireBlogUserId
 
@@ -116,7 +116,7 @@ getPKCloudBlogEditR slug = do
             -- Generate HTML.
             generateHTML post form
 
-postPKCloudBlogEditR :: forall site post . PostLink -> Handler site post Html
+postPKCloudBlogEditR :: forall site post tag . PostLink -> Handler site post tag Html
 postPKCloudBlogEditR slug = do
     _ <- requireBlogUserId
 
@@ -157,7 +157,7 @@ postPKCloudBlogEditR slug = do
                     redirect $ PKCloudBlogEditR slug
 
 -- Delete post handler.
-postPKCloudBlogDeleteR :: forall site post . PostLink -> Handler site post Html
+postPKCloudBlogDeleteR :: forall site post tag . PostLink -> Handler site post tag Html
 postPKCloudBlogDeleteR slug = do
     _ <- requireBlogUserId
     -- Lookup post.

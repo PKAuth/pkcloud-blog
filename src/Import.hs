@@ -22,19 +22,19 @@ import PKCloud.Blog.Routes as Export
 -- TODO: Move to PKCloud.Import?
 import Text.Blaze (Markup)
 -- | Type for forms in master site.
-type MasterForm a = forall site post . (PKCloudBlog site post, RenderMessage site FormMessage) => Markup -> MForm (HandlerT site IO) (FormResult a, WidgetT site IO ())
+type MasterForm a = forall site post tag . (PKCloudBlog site post tag, RenderMessage site FormMessage) => Markup -> MForm (HandlerT site IO) (FormResult a, WidgetT site IO ())
 
 
 
 -- type Handler master post a = (ToMasterRoute PKCloudBlogApp master, PKCloudBlog master post) => HandlerT PKCloudBlogApp (HandlerT master IO) a
-type Handler master post a = (ToMasterRoute PKCloudBlogApp master, PKCloudBlog master post) => HandlerT PKCloudBlogApp (HandlerT master IO) a
+type Handler master post tag a = (ToMasterRoute PKCloudBlogApp master, PKCloudBlog master post tag) => HandlerT PKCloudBlogApp (HandlerT master IO) a
 
 
 -- type Widget master post edit = (PKCloudBlog master post edit) => WidgetT PKCloudBlogApp (HandlerT master IO) ()
 -- type MasterWidget master = forall post edit . (PKCloudBlog master post edit) => WidgetT master IO ()
 type MasterWidget master = WidgetT master IO ()
 
-maybeBlogUserId :: forall site post . Handler site post (Maybe (AuthId site))
+maybeBlogUserId :: forall site post tag . Handler site post tag (Maybe (AuthId site))
 maybeBlogUserId = do
     userM <- lift maybeAuthId
     case userM of
@@ -48,7 +48,7 @@ maybeBlogUserId = do
             else
                 return Nothing
 
-requireBlogUserId :: forall site post . Handler site post (AuthId site)
+requireBlogUserId :: forall site post tag . Handler site post tag (AuthId site)
 requireBlogUserId = do
     userId :: AuthId site <- lift requireAuthId
 

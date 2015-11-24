@@ -13,7 +13,7 @@ data FormData = FormData {
     , _formDataPublished :: PostPublished
     }
 
-generateHTML :: forall site post . (MasterWidget site, Enctype) -> Handler site post Html
+generateHTML :: forall site post tag . (MasterWidget site, Enctype) -> Handler site post tag Html
 generateHTML (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp $ do
     pkcloudSetTitle "New post"
     [whamlet|
@@ -58,7 +58,7 @@ renderNewForm markup = do
     return (res, widget)
 
     where
-        checkSlug :: forall site post . (PKCloudBlog site post) => PostLink -> HandlerT site IO (Either Text PostLink)
+        checkSlug :: forall site post tag . (PKCloudBlog site post tag) => PostLink -> HandlerT site IO (Either Text PostLink)
         checkSlug slug = do
             -- Check that slug isn't used.
             postM :: Maybe (Entity post) <- runDB' $ getBy $ pkPostUniqueLink slug
@@ -93,7 +93,7 @@ renderNewForm markup = do
             let attrs = fsAttrs setting in
             setting {fsAttrs = ("readonly","readonly"):attrs}
 
-getPKCloudBlogNewR :: Handler site post Html
+getPKCloudBlogNewR :: Handler site post tag Html
 getPKCloudBlogNewR = do
     -- Check if user can create posts.
     _ <- requireBlogUserId
@@ -104,7 +104,7 @@ getPKCloudBlogNewR = do
     -- Generate html.
     generateHTML form
 
-postPKCloudBlogNewR :: forall site post . Handler site post Html
+postPKCloudBlogNewR :: forall site post tag . Handler site post tag Html
 postPKCloudBlogNewR = do
     userId <- requireBlogUserId
 

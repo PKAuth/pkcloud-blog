@@ -22,7 +22,6 @@ library
                        PKCloud.Blog.Routes
                        PKCloud.Blog.Handler.Author
                        PKCloud.Blog.Handler.Edit
-                       PKCloud.Blog.Handler.Edits
                        PKCloud.Blog.Handler.New
                        PKCloud.Blog.Handler.Post
                        PKCloud.Blog.Handler.Posts

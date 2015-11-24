@@ -17,20 +17,17 @@ type PostContent = Text
 type PostPublished = Bool
 -- type PostEditPublished = Bool
 
-class (SubEntity post, PKCloudSecurityPermissions master post, PKCloud master) => PKCloudBlog master post | master -> post, post -> master where
+class (SubEntity post, SubEntity tag, PKCloudSecurityPermissions master post, PKCloud master) => PKCloudBlog master post tag | master -> post, post -> master, master -> tag, tag -> master where
     -- | Post datatype and getters.
-    -- data PKPost master
     pkPost :: AuthId master -> PostLink -> UTCTime -> PostPublished -> PostTitle -> PostContent -> PostPreview -> Maybe UTCTime -> post
     pkPostIdField :: EntityField (post) (Key (post))
     pkPostAuthor :: post -> AuthId master
-    -- pkPostTitle :: post -> PostTitle
     pkPostLink :: post -> PostLink
     pkPostUniqueLink :: PostLink -> Unique post
     pkPostDate :: post -> UTCTime
     pkPostDateField :: EntityField post UTCTime
     pkPostPublished :: post -> PostPublished
     pkPostPublishedField :: EntityField (post) PostPublished
-
     pkPostTitle :: post -> PostTitle
     pkPostTitleField :: EntityField post PostTitle
     pkPostContent :: post -> PostContent
@@ -38,31 +35,16 @@ class (SubEntity post, PKCloudSecurityPermissions master post, PKCloud master) =
     pkPostEditDate :: post -> Maybe UTCTime
     pkPostEditDateField :: EntityField post (Maybe UTCTime)
 
+    -- | Route to link to from a author's name. 
     pkBlogAuthorRoute :: Text -> Route master
+    -- pkBlogAuthorRoute = toMasterRoute . PKCloudBlogAuthorR -- Default is that author's posts page.
 
-    -- | Post edit datatype and getters.
-    -- data PKPostEdit master
-    -- pkPostEdit :: PostTitle -> Key (post) -> PostMarkdown -> PostPreview -> AuthId master -> UTCTime -> PostEditPublished -> edit
-    -- pkPostEditIdField :: EntityField (edit) (Key (edit))
-    -- pkPostEditTitle :: edit -> PostTitle
-    -- pkPostEditTitleField :: EntityField (edit) PostTitle
-    -- pkPostEditPost :: edit -> Key (post)
-    -- pkPostEditPostField :: EntityField (edit) (Key (post))
-    -- pkPostEditContent :: edit -> PostMarkdown
-    -- pkPostEditPreview :: edit -> PostPreview
-    -- pkPostEditDate :: edit -> UTCTime
-    -- pkPostEditDateField :: EntityField (edit) UTCTime
-    -- pkPostEditEditor :: edit -> AuthId master
-    -- pkPostEditPublished :: edit -> PostEditPublished
-    -- pkPostEditPublishedField :: EntityField edit PostEditPublished
     -- Active (limit 1 per post?)
     -- Previews?
     --  Create -> Preview -> Edit??
-
-    -- canPost :: user -> m Bool ???
     
 -- | Retrieves the n most recent posts.
-pkBlogRetrievePosts :: forall site post . (PKCloudBlog site post) => Int -> HandlerT site IO [Entity post]
+pkBlogRetrievePosts :: forall site post tag . (PKCloudBlog site post tag) => Int -> HandlerT site IO [Entity post]
 pkBlogRetrievePosts n = do
     runDB' $ select $ from $ \p -> do
         where_ (p ^. pkPostPublishedField ==. val True)

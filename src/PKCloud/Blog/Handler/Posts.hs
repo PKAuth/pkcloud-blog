@@ -4,8 +4,7 @@ import Import
 
 import qualified Data.List as List
 
-getPostsHelper :: forall site post . Int64 -> Handler site post Html
--- getPostsHelper :: forall site . (PKCloudBlog site, GeneralPersistSql site (HandlerT site IO)) => Int64 -> HandlerT PKCloudBlogApp (HandlerT site IO) Html
+getPostsHelper :: forall site post tag . Int64 -> Handler site post tag Html
 getPostsHelper page | page < 1 = getPostsHelper 1
 getPostsHelper page = do
     -- Get 11 posts. 
@@ -178,8 +177,8 @@ getPostsHelper page = do
         --             #{pkPostLink post}
         --     |]
 
-getPKCloudBlogPostsR :: Handler site post Html
+getPKCloudBlogPostsR :: Handler site post tag Html
 getPKCloudBlogPostsR = getPostsHelper 1
 
-getPKCloudBlogPostsPageR :: Int64 -> Handler site post Html
+getPKCloudBlogPostsPageR :: Int64 -> Handler site post tag Html
 getPKCloudBlogPostsPageR = getPostsHelper

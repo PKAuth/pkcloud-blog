@@ -2,7 +2,7 @@ module PKCloud.Blog.Handler.Post where
 
 import Import
 
-getPKCloudBlogPostR :: forall site post . Text -> Handler site post Html
+getPKCloudBlogPostR :: forall site post tag . Text -> Handler site post tag Html
 getPKCloudBlogPostR slug = lift $ do
     -- Get post.
     postM :: (Maybe (Entity post)) <- runDB' $ getBy $ pkPostUniqueLink slug

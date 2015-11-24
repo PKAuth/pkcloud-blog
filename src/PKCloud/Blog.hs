@@ -11,7 +11,6 @@ import PKCloud.Import
 
 import PKCloud.Blog.Handler.Author
 import PKCloud.Blog.Handler.Edit
-import PKCloud.Blog.Handler.Edits
 import PKCloud.Blog.Handler.New
 import PKCloud.Blog.Handler.Post
 import PKCloud.Blog.Handler.Posts
@@ -20,7 +19,7 @@ import PKCloud.Blog.Handler.Root
 import PKCloud.Blog.Core as Export
 import PKCloud.Blog.Routes as Export
 
-instance (ToMasterRoute PKCloudBlogApp master, PKCloudBlog master post) => YesodSubDispatch PKCloudBlogApp (HandlerT master IO) where
+instance (ToMasterRoute PKCloudBlogApp master, PKCloudBlog master post tag) => YesodSubDispatch PKCloudBlogApp (HandlerT master IO) where
     yesodSubDispatch = $(mkYesodSubDispatch resourcesPKCloudBlogApp)
 
 -- BlogPost
