@@ -2,6 +2,8 @@ module PKCloud.Blog.Handler.New (getPKCloudBlogNewR, postPKCloudBlogNewR) where
 
 import Import
 
+import qualified Data.Char as Char
+import qualified Data.Text as Text
 import Text.Julius (rawJS)
 
 data FormData = FormData {
@@ -58,10 +60,15 @@ renderNewForm markup = do
     where
         checkSlug :: forall site post . (PKCloudBlog site post) => PostLink -> HandlerT site IO (Either Text PostLink)
         checkSlug slug = do
+            -- Check that slug isn't used.
             postM :: Maybe (Entity post) <- runDB' $ getBy $ pkPostUniqueLink slug
             case postM of
                 Nothing ->
-                    return $ Right slug
+                    -- Checek that slug only is lowercase and dash characters.
+                    if Text.all (\c -> Char.isLower c || c == '-') slug then
+                        return $ Right slug
+                    else
+                        return $ Left "Permalinks can only consist of lowercase characters and dashes."
                 Just _ ->
                     return $ Left "This permalink is already taken."
 
