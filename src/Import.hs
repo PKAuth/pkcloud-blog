@@ -9,9 +9,15 @@ module Import (
     , maybeBlogUserId
     , requireBlogUserId
     , makeBlogPreview
+    , tagField
+    , getAutocompleteTags
+    , autocompleteTextField
+    , identToJavascript
     ) where
 
 import Control.Monad as Export (when)
+import qualified Data.Aeson as Aeson
+import qualified Data.Char as Char
 import qualified Data.List as List
 import qualified Data.Text as Text
 import PKCloud.Import as Export
@@ -59,6 +65,13 @@ requireBlogUserId = do
 
     return userId
 
+getAutocompleteTags :: forall site post tag . (PKCloudBlog site post tag) => HandlerT site IO [Text]
+getAutocompleteTags = do
+    -- Get distinct tags from DB.
+    tags <- runDB' $ select $ distinct $ from $ \(tag :: SqlExpr (Entity tag)) -> do
+        return (tag ^. pkPostTagTagField)
+    return $ fmap unValue tags
+
 -- | Grab the first three paragraphs as a preview. 
 makeBlogPreview :: Text -> Text
 makeBlogPreview orig = 
@@ -84,4 +97,39 @@ makeBlogPreview orig =
 
         isEmpty t = "" == Text.strip t
 
+-- Make sure tags are only characters, underscores, or dashed.
+tagField :: forall m . (Monad m, RenderMessage (HandlerSite m) FormMessage) => [Text] -> Field m [Text]
+tagField tags = check (\tags -> 
+        if List.any (not . Text.all (\c -> Char.isAlphaNum c || c == '-' || c == '_')) tags then
+            Left ("Tags may only contain alphanumeric characters, underscores, or dashes." :: Text)
+        else
+            Right tags
+    ) $ autocompleteTextField tags
 
+
+-- TODO: move to PKCloud?
+-- | Textfield with autocompletion suggestions. Requires [bootstrap-tokenfield](http://sliptree.github.io/bootstrap-tokenfield/). 
+autocompleteTextField :: forall m . (Monad m, RenderMessage (HandlerSite m) FormMessage) => [Text] -> Field m [Text]
+autocompleteTextField suggestions = Field (parseHelper parser) view UrlEncoded
+    where
+        view :: FieldViewFunc m [Text]
+        view id name attr res req = do
+            toWidget [julius|
+                $(#{identToJavascript id}).tokenfield({
+                    autocomplete: {
+                        source: #{Aeson.toJSON suggestions},
+                        delay: 100
+                    },
+                    showAutocompleteOnFocus: false,
+                    delimiter: ',',
+                    createTokensOnBlur: true
+                });
+            |]
+            let res' = fmap (Text.intercalate ", ") res
+            (fieldView (textField :: Field m Text)) id name attr res' req
+            
+        parser = Right . fmap Text.strip . Text.split (== ',')
+
+-- Convert an identity to an Aeson.Value, which can be embeded in javascript. 
+identToJavascript :: Text -> Aeson.Value
+identToJavascript = Aeson.toJSON .("#" <>)

@@ -1,10 +1,7 @@
 module PKCloud.Blog.Handler.New (getPKCloudBlogNewR, postPKCloudBlogNewR) where
 
-import Control.Monad.Trans.Reader
-import qualified Data.Aeson as Aeson
 import qualified Data.Char as Char
 import qualified Data.Text as Text
-import Text.Julius (rawJS)
 
 import Import
 
@@ -12,7 +9,7 @@ data FormData = FormData {
       _formDataTitle :: PostTitle
     , _formDataSlug :: PostLink
     , _formDataContent :: Textarea
---    , _formDataTags :: [Text]
+    , _formDataTags :: [Text]
     , _formDataPublished :: PostPublished
     }
 
@@ -33,7 +30,7 @@ generateHTML (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp $ do
                         <div .clearfix>
     |]
 
-renderNewForm :: Aeson.Value -> MasterForm FormData
+renderNewForm :: [Text] -> MasterForm FormData
 renderNewForm tags markup = do
     titleId <- newFormIdent
     slugId <- newFormIdent
@@ -41,18 +38,20 @@ renderNewForm tags markup = do
         <$> areq textField (withId titleId titleSettings) Nothing
         <*> areq (checkM checkSlug textField) (withId slugId slugSettings) Nothing
         <*> areq textareaField contentSettings Nothing
+        <*> areq (tagField tags) tagSettings Nothing
         <*> areq (bootstrapCheckBoxField ("Publish" :: Text)) publishSettings (Just True)
 --        <*  bootstrapSubmit ("Submit" :: BootstrapSubmit Text)
       ) markup
     let widget = do
             toWidget [julius|
                 (function() {
+                    // Derive slug from title.
                     var cachedValue = null;
-                    $('##{rawJS titleId}').on('change keydown paste input mouseup', function() {
+                    $(#{identToJavascript titleId}).on('change keydown paste input mouseup', function() {
                         var value = $(this).val()
                         if (value != cachedValue) {
                             cachedValue = value;
-                            $('##{rawJS slugId}').val( getSlug( value));
+                            $(#{identToJavascript slugId}).val( getSlug( value));
                         }
                     });
                 })();
@@ -61,6 +60,9 @@ renderNewForm tags markup = do
     return (res, widget)
 
     where
+        tagSettings = withPlaceholder "Tags" $
+            bfs ("Tags" :: Text)
+
         checkSlug :: forall site post tag . (PKCloudBlog site post tag) => PostLink -> HandlerT site IO (Either Text PostLink)
         checkSlug slug = do
             -- Check that slug isn't used.
@@ -96,27 +98,13 @@ renderNewForm tags markup = do
             let attrs = fsAttrs setting in
             setting {fsAttrs = ("readonly","readonly"):attrs}
 
-getAutocompleteTags :: forall site post tag . Handler site post tag Aeson.Value
-getAutocompleteTags = do
-    -- Get distinct tags from DB.
-    -- tags <- runDB $ select $ distinct $ from $ \tag -> do
-    --     return (tag ^. pkPostTagTagField)
-    tags :: [Value Text] <- runDB $ select $ distinct $ from $ \(tag :: SqlExpr (Entity tag)) -> do
-        return (tag ^. pkPostTagTagField)
-    return $ Aeson.toJSON $ fmap unValue tags
-
-    where
-        -- runDB :: forall m a . (GeneralPersistBackend site ~ SqlBackend) => ReaderT (GeneralPersistBackend site) m a -> m a
-        runDB :: ReaderT (GeneralPersistBackend site) m a -> m a
-        runDB = runDB'
-
 getPKCloudBlogNewR :: Handler site post tag Html
 getPKCloudBlogNewR = do
     -- Check if user can create posts.
     _ <- requireBlogUserId
 
     -- Generate form widget.
-    tags <- getAutocompleteTags
+    tags <- lift getAutocompleteTags
     form <- lift $ generateFormPost $ renderNewForm tags
     
     -- Generate html.
@@ -127,7 +115,7 @@ postPKCloudBlogNewR = do
     userId <- requireBlogUserId
 
     -- Parse POST.
-    tags <- getAutocompleteTags
+    tags <- lift getAutocompleteTags
     ((result, formW), formE) <- lift $ runFormPost $ renderNewForm tags
     case result of
         FormMissing -> do
@@ -136,7 +124,7 @@ postPKCloudBlogNewR = do
         FormFailure _msg -> do
             lift $ pkcloudSetMessageDanger "Creating post failed."
             generateHTML (formW, formE)
-        FormSuccess (FormData title slug content' published) -> do
+        FormSuccess (FormData title slug content' tags published) -> do
             -- Create post.
             let content = unTextarea content'
             let preview = makeBlogPreview content
@@ -155,7 +143,10 @@ postPKCloudBlogNewR = do
                     -- Set message.
                     lift $ pkcloudSetMessageDanger "Another post already exists with the same permalink."
                     generateHTML (formW, formE)
-                Just _ -> do
+                Just postId -> do
+                    -- Insert tags.
+                    lift $ runDB' $ mapM_ (insert_ . pkPostTag postId) tags
+
                     -- Set message.
                     lift $ pkcloudSetMessageSuccess "Successfully created post!"
 

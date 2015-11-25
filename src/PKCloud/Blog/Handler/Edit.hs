@@ -70,13 +70,15 @@ generateHTML post (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp 
 data FormData = FormData {
       _formDataTitle :: PostTitle
     , _formDataContent :: Textarea
+    , _formDataTags :: [Text]
     , _formDataPublished :: PostPublished
     }
 
-renderEditForm :: forall site post tag . (PKCloudBlog site post tag) => post -> MasterForm FormData
-renderEditForm post = renderBootstrap3 BootstrapBasicForm $ FormData
+renderEditForm :: forall site post tag . (PKCloudBlog site post tag) => post -> [Text] -> [Text] -> MasterForm FormData
+renderEditForm post tags oldTags = renderBootstrap3 BootstrapBasicForm $ FormData
     <$> areq textField titleSettings ( Just $ pkPostTitle post)
     <*> areq textareaField contentSettings ( Just $ Textarea $ pkPostContent post)
+    <*> areq (tagField tags) tagSettings (Just oldTags)
     <*> areq (bootstrapCheckBoxField ("Publish" :: Text)) publishSettings ( Just $ pkPostPublished post)
 
     where
@@ -88,12 +90,23 @@ renderEditForm post = renderBootstrap3 BootstrapBasicForm $ FormData
 
         publishSettings = "Publish"
 
+        tagSettings = withPlaceholder "Tags" $
+            bfs ("Tags" :: Text)
+
         withAttr a setting = 
             let oldS = fsAttrs setting in
             setting {fsAttrs = a:oldS}
 
 renderDeleteForm :: MasterForm ()
 renderDeleteForm = renderDivs $ pure ()
+
+renderEditHelper :: forall site post tag . Key post -> Handler site post tag ([Text], [Text])
+renderEditHelper postId = do
+    tags <- lift $ getAutocompleteTags
+    oldTags <- fmap (fmap unValue) $ lift $ runDB' $ select $ from $ \tag -> do
+        where_ (tag ^. pkPostTagPostField ==. val postId)
+        return (tag ^. pkPostTagTagField)
+    return (tags, oldTags)
 
 getPKCloudBlogEditR :: forall site post tag . PostLink -> Handler site post tag Html
 getPKCloudBlogEditR slug = do
@@ -104,14 +117,15 @@ getPKCloudBlogEditR slug = do
     case postM of
         Nothing ->
             lift notFound
-        Just (Entity _ post) -> do
+        Just (Entity postId post) -> do
             -- Check if user can edit.
             hasPermission <- lift $ pkcloudCanWrite post
             when (not hasPermission) $ 
                 lift $ permissionDenied "You do not have permission to edit this post."
             
             -- Generate form.
-            form <- lift $ generateFormPost $ renderEditForm post
+            (autoTags, oldTags) <- renderEditHelper postId
+            form <- lift $ generateFormPost $ renderEditForm post autoTags oldTags
 
             -- Generate HTML.
             generateHTML post form
@@ -132,7 +146,8 @@ postPKCloudBlogEditR slug = do
                 lift $ permissionDenied "You do not have permission to edit this post."
             
             -- Parse form.
-            ((result, formW), formE) <- lift $ runFormPost $ renderEditForm post
+            (autoTags, oldTags) <- renderEditHelper postId
+            ((result, formW), formE) <- lift $ runFormPost $ renderEditForm post autoTags oldTags
             case result of
                 FormMissing -> do
                     lift $ pkcloudSetMessageDanger "Editing post failed."
@@ -140,7 +155,7 @@ postPKCloudBlogEditR slug = do
                 FormFailure _msg -> do
                     lift $ pkcloudSetMessageDanger "Editing post failed."
                     generateHTML post (formW, formE)
-                FormSuccess (FormData title content' published) -> do
+                FormSuccess (FormData title content' tags published) -> do
                     -- Update post.
                     let content = unTextarea content'
                     let preview = makeBlogPreview content
@@ -148,7 +163,16 @@ postPKCloudBlogEditR slug = do
                     let date = pkPostDate post
                     editDate <- getCurrentTime
                     let newPost = pkPost author slug date published title content preview (Just editDate)
-                    lift $ runDB' $ replace postId newPost
+                    lift $ runDB' $ do
+                        -- Update post.
+                        replace postId newPost
+
+                        -- Delete old tags.
+                        delete $ from $ \tag -> do
+                            where_ (tag ^. pkPostTagPostField ==. val postId)
+
+                        -- Insert new tags.
+                        mapM_ (insert_ . pkPostTag postId) tags
 
                     -- Set message.
                     lift $ pkcloudSetMessageSuccess "Successfully edited post!"
@@ -182,7 +206,11 @@ postPKCloudBlogDeleteR slug = do
                     redirect $ PKCloudBlogEditR slug
                 FormSuccess () -> do
                     -- Delete post.
-                    lift $ runDB' $ deleteKey postId
+                    lift $ runDB' $ do
+                        delete $ from $ \tag -> do
+                            where_ (tag ^. pkPostTagPostField ==. val postId)
+                        
+                        deleteKey postId
 
                     -- Set message.
                     lift $ pkcloudSetMessageSuccess "Successfully deleted post."
