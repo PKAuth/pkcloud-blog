@@ -1,15 +1,18 @@
 module PKCloud.Blog.Handler.New (getPKCloudBlogNewR, postPKCloudBlogNewR) where
 
-import Import
-
+import Control.Monad.Trans.Reader
+import qualified Data.Aeson as Aeson
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import Text.Julius (rawJS)
+
+import Import
 
 data FormData = FormData {
       _formDataTitle :: PostTitle
     , _formDataSlug :: PostLink
     , _formDataContent :: Textarea
+--    , _formDataTags :: [Text]
     , _formDataPublished :: PostPublished
     }
 
@@ -30,8 +33,8 @@ generateHTML (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp $ do
                         <div .clearfix>
     |]
 
-renderNewForm :: MasterForm FormData
-renderNewForm markup = do
+renderNewForm :: Aeson.Value -> MasterForm FormData
+renderNewForm tags markup = do
     titleId <- newFormIdent
     slugId <- newFormIdent
     (res, widget') <- renderBootstrap3 BootstrapBasicForm (FormData
@@ -93,13 +96,28 @@ renderNewForm markup = do
             let attrs = fsAttrs setting in
             setting {fsAttrs = ("readonly","readonly"):attrs}
 
+getAutocompleteTags :: forall site post tag . Handler site post tag Aeson.Value
+getAutocompleteTags = do
+    -- Get distinct tags from DB.
+    -- tags <- runDB $ select $ distinct $ from $ \tag -> do
+    --     return (tag ^. pkPostTagTagField)
+    tags :: [Value Text] <- runDB $ select $ distinct $ from $ \(tag :: SqlExpr (Entity tag)) -> do
+        return (tag ^. pkPostTagTagField)
+    return $ Aeson.toJSON $ fmap unValue tags
+
+    where
+        -- runDB :: forall m a . (GeneralPersistBackend site ~ SqlBackend) => ReaderT (GeneralPersistBackend site) m a -> m a
+        runDB :: ReaderT (GeneralPersistBackend site) m a -> m a
+        runDB = runDB'
+
 getPKCloudBlogNewR :: Handler site post tag Html
 getPKCloudBlogNewR = do
     -- Check if user can create posts.
     _ <- requireBlogUserId
 
     -- Generate form widget.
-    form <- lift $ generateFormPost renderNewForm
+    tags <- getAutocompleteTags
+    form <- lift $ generateFormPost $ renderNewForm tags
     
     -- Generate html.
     generateHTML form
@@ -109,7 +127,8 @@ postPKCloudBlogNewR = do
     userId <- requireBlogUserId
 
     -- Parse POST.
-    ((result, formW), formE) <- lift $ runFormPost renderNewForm
+    tags <- getAutocompleteTags
+    ((result, formW), formE) <- lift $ runFormPost $ renderNewForm tags
     case result of
         FormMissing -> do
             lift $ pkcloudSetMessageDanger "Creating post failed."
