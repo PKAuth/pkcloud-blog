@@ -9,7 +9,7 @@ data FormData = FormData {
       _formDataTitle :: PostTitle
     , _formDataSlug :: PostLink
     , _formDataContent :: Textarea
-    , _formDataTags :: [Text]
+    , _formDataTags :: Maybe [Text]
     , _formDataPublished :: PostPublished
     }
 
@@ -38,7 +38,7 @@ renderNewForm tags markup = do
         <$> areq textField (withId titleId titleSettings) Nothing
         <*> areq (checkM checkSlug textField) (withId slugId slugSettings) Nothing
         <*> areq textareaField contentSettings Nothing
-        <*> areq (tagField tags) tagSettings Nothing
+        <*> aopt (tagField tags) tagSettings Nothing
         <*> areq (bootstrapCheckBoxField ("Publish" :: Text)) publishSettings (Just True)
 --        <*  bootstrapSubmit ("Submit" :: BootstrapSubmit Text)
       ) markup
@@ -124,7 +124,7 @@ postPKCloudBlogNewR = do
         FormFailure _msg -> do
             lift $ pkcloudSetMessageDanger "Creating post failed."
             generateHTML (formW, formE)
-        FormSuccess (FormData title slug content' tags published) -> do
+        FormSuccess (FormData title slug content' tagsM published) -> do
             -- Create post.
             let content = unTextarea content'
             let preview = makeBlogPreview content
@@ -145,6 +145,7 @@ postPKCloudBlogNewR = do
                     generateHTML (formW, formE)
                 Just postId -> do
                     -- Insert tags.
+                    let tags = maybe [] id tagsM
                     lift $ runDB' $ mapM_ (insert_ . pkPostTag postId) tags
 
                     -- Set message.

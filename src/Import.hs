@@ -13,6 +13,8 @@ module Import (
     , getAutocompleteTags
     , autocompleteTextField
     , identToJavascript
+    , generatePostFilters
+    , displayPostPreviews
     ) where
 
 import Control.Monad as Export (when)
@@ -133,3 +135,124 @@ autocompleteTextField suggestions = Field (parseHelper parser) view UrlEncoded
 -- Convert an identity to an Aeson.Value, which can be embeded in javascript. 
 identToJavascript :: Text -> Aeson.Value
 identToJavascript = Aeson.toJSON .("#" <>)
+
+generatePostFilters :: Handler site post tag (SqlExpr (Entity post) -> SqlExpr (Value Bool))
+generatePostFilters = do
+    userM <- maybeBlogUserId
+    case userM of
+        Nothing ->
+            -- Not logged in so filter out unpublished posts.
+            return $ \p -> p ^. pkPostPublishedField ==. val True
+        Just userId ->
+            -- If the post is unpublished, only show if the user is the author?
+            return $ \p -> p ^. pkPostPublishedField ==. val True ||. p ^. pkPostAuthorField ==. val userId
+
+displayPostPreviews :: forall site post tag . (PKCloudBlog site post tag, ToMasterRoute PKCloudBlogApp site) => [Entity post] -> Int64 -> Int64 -> Route PKCloudBlogApp -> (Int64 -> Route PKCloudBlogApp) -> MasterWidget site
+displayPostPreviews posts page postsPerPage route routePage = 
+        case posts of
+            [] -> 
+                if page == 1 then
+                    [whamlet|
+                        There are no posts yet. Check back later!
+                    |]
+                else
+                    notFound
+            _ -> do
+                -- Display up to 10 of their previews.
+                let postsW = mconcat $ map displayPreview $ List.take postsPerPage' posts
+
+                [whamlet|
+                    ^{postsW}
+                    ^{navigationW page posts}
+                |]
+
+    where
+        postsPerPage' :: Int
+        postsPerPage' = fromInteger $ toInteger postsPerPage
+        qLimit' = postsPerPage' + 1
+
+        displayPreview :: Entity post -> WidgetT site IO ()
+        displayPreview (Entity _ post) = do
+            -- -- Get latest edit.
+            -- editL <- handlerToWidget $ runDB' $ select $ from $ \e -> do
+            --     where_ (e ^. pkPostEditPostField ==. val postId &&. e ^. pkPostEditPublishedField ==. val True)
+            --     limit 1
+            --     orderBy [desc (e ^. pkPostEditDateField)]
+            --     return e
+
+            -- case editL of
+            --     [Entity _editId edit] -> do
+
+            author <- handlerToWidget $ pkcloudDisplayName $ pkPostAuthor post
+            authorIdent <- handlerToWidget $ pkcloudUniqueUsername $ pkPostAuthor post
+            let postRoute = toMasterRoute $ PKCloudBlogPostR $ pkPostLink post
+            [whamlet|
+                <div>
+                    <h3 .blog-title>
+                        <a href="@{postRoute}">
+                            #{pkPostTitle post}
+                    <div .text-muted>
+                        By <a href="@{pkBlogAuthorRoute authorIdent}">#{author}</a> - #{renderDayLong $ pkPostDate post}
+                    <div .blog-content>
+                        #{renderBlogContent $ pkPostPreview post}
+                        <p>
+                            <a href="@{postRoute}">
+                                Continue reading...
+                <div .clearfix>
+            |]
+
+        navigationW :: Int64 -> [a] -> WidgetT site IO ()
+        navigationW page l = do
+            -- Check if we should display the older button.
+            let masterPostsRoute = toMasterRoute . routePage
+            let older = if List.length l == qLimit' then
+                    [whamlet|
+                        <ul .nav .nav-pills .pull-right>
+                            <li role="presentation">
+                                <a href="@{masterPostsRoute (page + 1)}">
+                                    Older
+                    |]
+                  else
+                    mempty
+
+            -- Check if we should display the newer button.
+            let newer = case page of
+                    2 ->
+                        [whamlet|
+                            <ul .nav .nav-pills>
+                                <li role="presentation">
+                                    <a href="@{toMasterRoute route}">
+                                        Newer
+                        |]
+                    1 -> 
+                        mempty
+                    _ ->
+                        [whamlet|
+                            <ul .nav .nav-pills>
+                                <li role="presentation">
+                                    <a href="@{masterPostsRoute (page - 1)}">
+                                        Newer
+                        |]
+
+            toWidget [lucius|
+                .blog-title {
+                    margin-bottom: 3px;
+                }
+
+                .blog-title a {
+                    color: rgb(51, 51, 51);
+                }
+
+                .blog-content {
+                    margin-top: 15px;
+                    margin-bottom: 35px;
+                }
+            |]
+
+            [whamlet|
+                <div>
+                    ^{newer}
+                    ^{older}
+                <div .clearfix>
+            |]
+

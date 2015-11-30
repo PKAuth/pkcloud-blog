@@ -9,7 +9,7 @@ getPKCloudBlogPostR slug = lift $ do
     case postM of
         Nothing ->
             notFound
-        Just (Entity _ post) -> do
+        Just (Entity postId post) -> do
             -- Check if not published.
             when (not $ pkPostPublished post) 
                 notFound
@@ -39,11 +39,41 @@ getPKCloudBlogPostR slug = lift $ do
                                     By <a href="@{pkBlogAuthorRoute authorIdent}">#{authorName}</a> - #{renderDayLong $ pkPostDate post}
                                 <div .blog-content>
                                     #{renderBlogContent $ pkPostContent post}
+                                ^{tagsW postId}
                             <div .col-sm-4>
                                 ^{sidebarW post}
                 |]
 
     where
+        tagsW postId = do
+            -- Get tags.
+            tags <- handlerToWidget $ runDB' $ select $ from $ \tag -> do
+                where_ (tag ^. pkPostTagPostField ==. val postId)
+                return tag
+            
+            case tags of
+                [] ->
+                    mempty
+                _ -> do
+                    let tagsW' = mconcat $ fmap (\(Entity _ tag) -> 
+                                [whamlet|
+                                    <li role="presentation">
+                                        <a href="@{toMasterRoute $ PKCloudBlogTagR $ pkPostTagTag tag}">
+                                            #{pkPostTagTag tag}
+                                |]
+                            ) tags
+                    tags <- newIdent
+                    toWidget [lucius|
+                        .#{tags} > li > a {
+                            background-color: rgb(246, 246, 246);
+                            margin: 0px 10px 10px 0px;
+                        }
+                    |]
+                    [whamlet|
+                        <ul .#{tags} .nav .nav-pills>
+                            ^{tagsW'}
+                    |]
+
         sidebarW post = do
             -- Check if user can edit post. 
             canEdit <- handlerToWidget $ pkcloudCanWrite post

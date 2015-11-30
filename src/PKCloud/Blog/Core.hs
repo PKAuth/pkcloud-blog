@@ -22,6 +22,7 @@ class (SubEntity post, SubEntity tag, PKCloudSecurityPermissions master post, PK
     pkPost :: AuthId master -> PostLink -> UTCTime -> PostPublished -> PostTitle -> PostContent -> PostPreview -> Maybe UTCTime -> post
     pkPostIdField :: EntityField post (Key post)
     pkPostAuthor :: post -> AuthId master
+    pkPostAuthorField :: EntityField post (AuthId master)
     pkPostLink :: post -> PostLink
     pkPostUniqueLink :: PostLink -> Unique post
     pkPostDate :: post -> UTCTime

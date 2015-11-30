@@ -70,7 +70,7 @@ generateHTML post (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp 
 data FormData = FormData {
       _formDataTitle :: PostTitle
     , _formDataContent :: Textarea
-    , _formDataTags :: [Text]
+    , _formDataTags :: Maybe [Text]
     , _formDataPublished :: PostPublished
     }
 
@@ -78,7 +78,7 @@ renderEditForm :: forall site post tag . (PKCloudBlog site post tag) => post -> 
 renderEditForm post tags oldTags = renderBootstrap3 BootstrapBasicForm $ FormData
     <$> areq textField titleSettings ( Just $ pkPostTitle post)
     <*> areq textareaField contentSettings ( Just $ Textarea $ pkPostContent post)
-    <*> areq (tagField tags) tagSettings (Just oldTags)
+    <*> aopt (tagField tags) tagSettings (Just (Just oldTags))
     <*> areq (bootstrapCheckBoxField ("Publish" :: Text)) publishSettings ( Just $ pkPostPublished post)
 
     where
@@ -155,7 +155,7 @@ postPKCloudBlogEditR slug = do
                 FormFailure _msg -> do
                     lift $ pkcloudSetMessageDanger "Editing post failed."
                     generateHTML post (formW, formE)
-                FormSuccess (FormData title content' tags published) -> do
+                FormSuccess (FormData title content' tagsM published) -> do
                     -- Update post.
                     let content = unTextarea content'
                     let preview = makeBlogPreview content
@@ -172,6 +172,7 @@ postPKCloudBlogEditR slug = do
                             where_ (tag ^. pkPostTagPostField ==. val postId)
 
                         -- Insert new tags.
+                        let tags = maybe [] id tagsM
                         mapM_ (insert_ . pkPostTag postId) tags
 
                     -- Set message.
