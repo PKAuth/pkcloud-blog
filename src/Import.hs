@@ -25,7 +25,6 @@ import qualified Data.Text as Text
 import PKCloud.Import as Export
 
 import PKCloud.Blog.Core as Export
-import PKCloud.Blog.Routes as Export
 
 -- TODO: Move to PKCloud.Import?
 import Text.Blaze (Markup)
@@ -159,7 +158,7 @@ displayPostPreviews posts page postsPerPage route routePage =
                     notFound
             _ -> do
                 -- Display up to 10 of their previews.
-                let postsW = mconcat $ map displayPreview $ List.take postsPerPage' posts
+                let postsW = mconcat $ map pkBlogDisplayPreview $ List.take postsPerPage' posts
 
                 [whamlet|
                     ^{postsW}
@@ -170,36 +169,6 @@ displayPostPreviews posts page postsPerPage route routePage =
         postsPerPage' :: Int
         postsPerPage' = fromInteger $ toInteger postsPerPage
         qLimit' = postsPerPage' + 1
-
-        displayPreview :: Entity post -> WidgetT site IO ()
-        displayPreview (Entity _ post) = do
-            -- -- Get latest edit.
-            -- editL <- handlerToWidget $ runDB' $ select $ from $ \e -> do
-            --     where_ (e ^. pkPostEditPostField ==. val postId &&. e ^. pkPostEditPublishedField ==. val True)
-            --     limit 1
-            --     orderBy [desc (e ^. pkPostEditDateField)]
-            --     return e
-
-            -- case editL of
-            --     [Entity _editId edit] -> do
-
-            author <- handlerToWidget $ pkcloudDisplayName $ pkPostAuthor post
-            authorIdent <- handlerToWidget $ pkcloudUniqueUsername $ pkPostAuthor post
-            let postRoute = toMasterRoute $ PKCloudBlogPostR $ pkPostLink post
-            [whamlet|
-                <div>
-                    <h3 .blog-title>
-                        <a href="@{postRoute}">
-                            #{pkPostTitle post}
-                    <div .text-muted>
-                        By <a href="@{pkBlogAuthorRoute authorIdent}">#{author}</a> - #{renderDayLong $ pkPostDate post}
-                    <div .blog-content>
-                        #{renderBlogContent $ pkPostPreview post}
-                        <p>
-                            <a href="@{postRoute}">
-                                Continue reading...
-                <div .clearfix>
-            |]
 
         navigationW :: Int64 -> [a] -> WidgetT site IO ()
         navigationW page l = do

@@ -36,9 +36,9 @@ getPKCloudBlogPostR slug = lift $ do
                                 <h2 .blog-title>
                                     #{pkPostTitle post}
                                 <div .text-muted>
-                                    By <a href="@{pkBlogAuthorRoute authorIdent}">#{authorName}</a> - #{renderDayLong $ pkPostDate post}
+                                    By <a href="@{pkBlogAuthorRoute authorIdent}">#{authorName}</a> - #{pkBlogRenderDayLong $ pkPostDate post}
                                 <div .blog-content>
-                                    #{renderBlogContent $ pkPostContent post}
+                                    #{pkBlogRenderContent $ pkPostContent post}
                                 ^{tagsW postId}
                             <div .col-sm-4>
                                 ^{sidebarW post}

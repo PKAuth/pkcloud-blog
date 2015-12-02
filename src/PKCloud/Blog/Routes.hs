@@ -2,10 +2,8 @@ module PKCloud.Blog.Routes where
 
 import PKCloud.Import
 
-import PKCloud.Blog.Core
-
--- import PKCloud.Blog.Handler.Posts
--- import PKCloud.Blog.Handler.Root
+-- import PKCloud.Blog.Core
+data PKCloudBlogApp = PKCloudBlogApp
 
 mkYesodSubData "PKCloudBlogApp" [parseRoutes|
 / PKCloudBlogRootR GET

@@ -1,6 +1,6 @@
 flags: {}
 packages:
 - '.'
-- ../repo-pkcloud-core
+- ../pkcloud-core
 extra-deps: []
 resolver: lts-3.0

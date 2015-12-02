@@ -1,4 +1,16 @@
-module PKCloud.Blog.Core where
+module PKCloud.Blog.Core (
+      module Export
+    , PKCloudBlog(..)
+    , pkBlogRetrievePosts
+    , pkBlogRenderContent
+    , pkBlogDisplayPreview
+    , pkBlogRenderDayLong
+    , PostLink
+    , PostTitle
+    , PostPreview
+    , PostContent
+    , PostPublished
+    ) where
 
 -- import Control.Monad
 import qualified Data.Text.Lazy as TextL
@@ -6,8 +18,9 @@ import qualified Data.Time.Format as Time
 import qualified Text.Markdown as Markdown
 
 import PKCloud.Import
+import PKCloud.Blog.Routes as Export
 
-data PKCloudBlogApp = PKCloudBlogApp
+-- data PKCloudBlogApp = PKCloudBlogApp
 
 type PostLink = Text
 type PostTitle = Text
@@ -75,13 +88,35 @@ pkBlogRetrievePosts n = do
     --             return acc
     --   ) [] posts
 
-renderBlogContent :: Text -> Html
-renderBlogContent = Markdown.markdown Markdown.def . TextL.fromStrict
+-- | Render a blog's markdown content. 
+pkBlogRenderContent :: Text -> Html
+pkBlogRenderContent = Markdown.markdown Markdown.def . TextL.fromStrict
 
-renderDayLong :: UTCTime -> String
-renderDayLong = Time.formatTime Time.defaultTimeLocale "%B %e, %Y"
+-- | Render a date with a long format.
+pkBlogRenderDayLong :: UTCTime -> String
+pkBlogRenderDayLong = Time.formatTime Time.defaultTimeLocale "%B %e, %Y"
 
 instance PKCloudApp PKCloudBlogApp where
     pkcloudAppName PKCloudBlogApp = "Blog"
     pkcloudAppIdentifier PKCloudBlogApp = "blog"
+
+pkBlogDisplayPreview :: forall site post tag . (PKCloudBlog site post tag, ToMasterRoute PKCloudBlogApp site) => Entity post -> WidgetT site IO ()
+pkBlogDisplayPreview (Entity _ post) = do
+    author <- handlerToWidget $ pkcloudDisplayName $ pkPostAuthor post
+    authorIdent <- handlerToWidget $ pkcloudUniqueUsername $ pkPostAuthor post
+    let postRoute = toMasterRoute $ PKCloudBlogPostR $ pkPostLink post
+    [whamlet|
+        <div .blog-preview>
+            <h3 .blog-title>
+                <a href="@{postRoute}">
+                    #{pkPostTitle post}
+            <div .text-muted>
+                By <a href="@{pkBlogAuthorRoute authorIdent}">#{author}</a> - #{pkBlogRenderDayLong $ pkPostDate post}
+            <div .blog-content>
+                #{pkBlogRenderContent $ pkPostPreview post}
+                <p>
+                    <a href="@{postRoute}">
+                        Continue reading...
+        <div .clearfix>
+    |]
 
