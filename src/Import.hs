@@ -15,6 +15,7 @@ module Import (
     , identToJavascript
     , generatePostFilters
     , displayPostPreviews
+    , makeColumns
     ) where
 
 import Control.Monad as Export (when)
@@ -225,3 +226,15 @@ displayPostPreviews posts page postsPerPage route routePage =
                 <div .clearfix>
             |]
 
+makeColumns :: Maybe (WidgetT s IO ()) -> (WidgetT s IO ()) -> (WidgetT s IO ())
+makeColumns Nothing w = [whamlet|
+        <div .col-xs-12>
+            ^{w}
+    |]
+
+makeColumns (Just sidebar) w = [whamlet|
+        <div .col-xs-8>
+            ^{w}
+        <div .col-xs-4>
+            ^{sidebar}
+    |]

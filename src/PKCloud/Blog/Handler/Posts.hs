@@ -31,13 +31,11 @@ getPostsHelper page = do
     lift $ pkcloudDefaultLayout PKCloudBlogApp $ do
         pkcloudSetTitle "Posts"
 
+        let cols = makeColumns (sidebarW userM) $ displayPostPreviews posts page postsPerPage PKCloudBlogPostsR PKCloudBlogPostsPageR
         [whamlet|
             <div .container>
                 <div .row>
-                    <div .col-sm-8>
-                        ^{displayPostPreviews posts page postsPerPage PKCloudBlogPostsR PKCloudBlogPostsPageR}
-                    <div .col-sm-4>
-                        ^{sidebarW userM}
+                    ^{cols}
         |]
 
     where 
@@ -46,22 +44,24 @@ getPostsHelper page = do
         qLimit = postsPerPage + 1
         qOffset = (page - 1) * postsPerPage
 
-        sidebarW :: Maybe (AuthId site) -> WidgetT site IO ()
-        sidebarW userM = do
+        sidebarW :: Maybe (AuthId site) -> Maybe (WidgetT site IO ())
+        sidebarW userM = 
             let adminW = case userM of
                     Nothing -> 
-                        mempty
+                        Nothing
                     Just _ -> 
                             -- <div .panel .panel-default>
                             --     <div .panel-body>
-                        [whamlet|
+                        Just [whamlet|
                             <div>
                                 <a .btn .btn-default .btn-lg .btn-block href="@{toMasterRoute PKCloudBlogNewR}">
                                     New post
                         |]
-            [whamlet|
-                ^{adminW}
-            |]
+            in
+            adminW
+            -- [whamlet|
+            --     ^{adminW}
+            -- |]
             -- TODO: add more like tags? 
 
 

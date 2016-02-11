@@ -29,19 +29,20 @@ getPKCloudBlogPostR slug = lift $ do
                         margin-bottom: 35px;
                     }
                 |]
+                sidebarM <- sidebarW post
+                let cols = makeColumns sidebarM [whamlet|
+                    <h2 .blog-title>
+                        #{pkPostTitle post}
+                    <div .text-muted>
+                        By <a href="@{pkBlogAuthorRoute authorIdent}">#{authorName}</a> - #{pkBlogRenderDayLong $ pkPostDate post}
+                    <div .blog-content>
+                        #{pkBlogRenderContent $ pkPostContent post}
+                    ^{tagsW postId}
+                |]
                 [whamlet|
                     <div .container>
                         <div .row>
-                            <div .col-sm-8>
-                                <h2 .blog-title>
-                                    #{pkPostTitle post}
-                                <div .text-muted>
-                                    By <a href="@{pkBlogAuthorRoute authorIdent}">#{authorName}</a> - #{pkBlogRenderDayLong $ pkPostDate post}
-                                <div .blog-content>
-                                    #{pkBlogRenderContent $ pkPostContent post}
-                                ^{tagsW postId}
-                            <div .col-sm-4>
-                                ^{sidebarW post}
+                            ^{cols}
                 |]
 
     where
@@ -79,9 +80,9 @@ getPKCloudBlogPostR slug = lift $ do
             canEdit <- handlerToWidget $ pkcloudCanWrite post
 
             if not canEdit then
-                mempty
+                return Nothing
             else
-                [whamlet|
+                return $ Just [whamlet|
                     <div>
                         <a .btn .btn-default .btn-lg .btn-block href="@{toMasterRoute $ PKCloudBlogEditR $ pkPostLink post}">
                             Edit post
