@@ -28,7 +28,7 @@ getPostsHelper page = do
 
     userM <- maybeBlogUserId
 
-    lift $ pkcloudDefaultLayout PKCloudBlogApp $ do
+    lift $ pkcloudDefaultLayout PKCloudBlogApp "Blog Posts" $ do
         pkcloudSetTitle "Posts"
 
         let cols = makeColumns (sidebarW userM) $ displayPostPreviews posts page postsPerPage PKCloudBlogPostsR PKCloudBlogPostsPageR

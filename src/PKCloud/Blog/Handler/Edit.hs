@@ -3,7 +3,7 @@ module PKCloud.Blog.Handler.Edit where
 import Import
 
 generateHTML :: forall site post tag . post -> (MasterWidget site, Enctype) -> Handler site post tag Html
-generateHTML post (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp $ do
+generateHTML post (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp "Edit post" $ do
     pkcloudSetTitle "Edit post"
 
     -- Make delete form.

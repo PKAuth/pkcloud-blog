@@ -17,7 +17,7 @@ getPostsHelper page tag = do
         orderBy [desc (p ^. pkPostDateField)]
         return p
     
-    lift $ pkcloudDefaultLayout PKCloudBlogApp $ do
+    lift $ pkcloudDefaultLayout PKCloudBlogApp ("#" <> tag) $ do
         pkcloudSetTitle $ toHtml tag
 
         -- Display previews.

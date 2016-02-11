@@ -27,9 +27,11 @@ getPostsHelper page author = do
                 offset qOffset
                 orderBy [desc (p ^. pkPostDateField)]
                 return p
-
-            lift $ pkcloudDefaultLayout PKCloudBlogApp $ do
-                pkcloudSetTitle $ toHtml author
+            
+            username <- lift $ pkcloudDisplayName uId
+            let title = "Posts by " <> username
+            lift $ pkcloudDefaultLayout PKCloudBlogApp title $ do
+                pkcloudSetTitle $ toHtml title
 
                 -- Display previews.
                 [whamlet|

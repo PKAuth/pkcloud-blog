@@ -14,7 +14,7 @@ getPKCloudBlogPostR slug = lift $ do
             when (not $ pkPostPublished post) 
                 notFound
 
-            pkcloudDefaultLayout PKCloudBlogApp $ do
+            pkcloudDefaultLayout PKCloudBlogApp (pkPostTitle post) $ do
                 pkcloudSetTitle $ toHtml $ pkPostTitle post
                 let author :: AuthId site = pkPostAuthor post
                 authorName <- handlerToWidget $ pkcloudDisplayName author
