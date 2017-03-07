@@ -2,8 +2,8 @@ module PKCloud.Blog.Handler.Edit where
 
 import Import
 
-generateHTML :: forall site post tag . post -> (MasterWidget site, Enctype) -> Handler site post tag Html
-generateHTML post (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp "Edit post" $ do
+generateHTML :: forall site post tag . PostYear -> PostMonth -> PostDay -> post -> (MasterWidget site, Enctype) -> Handler site post tag Html
+generateHTML year month day post (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp "Edit post" $ do
     pkcloudSetTitle "Edit post"
 
     -- Make delete form.
@@ -30,7 +30,7 @@ generateHTML post (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp 
     let postLinkW = 
             if pkPostPublished post then
                 [whamlet|
-                    <a .btn .btn-default .btn-lg .btn-block href="@{toMasterRoute $ PKCloudBlogPostR $ pkPostLink post}">
+                    <a .btn .btn-default .btn-lg .btn-block href="@{toMasterRoute $ PKCloudBlogPostR year month day $ pkPostLink post}">
                         View post
                 |]
             else
@@ -40,7 +40,7 @@ generateHTML post (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp 
         <div .container>
             <div .row>
                 <div .col-sm-8>
-                    <form role=form method=post action="@{toMasterRoute $ PKCloudBlogEditR $ pkPostLink post}" enctype=#{formEnc}>
+                    <form role=form method=post action="@{toMasterRoute $ PKCloudBlogEditR year month day $ pkPostLink post}" enctype=#{formEnc}>
                         ^{formW}
                         <div .form-group .optional .pull-right>
                             <a href="#" name="preview" .btn .btn-default>
@@ -61,7 +61,7 @@ generateHTML post (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp 
                         <div ##{deleteModalId}-footer>
                             <button type="button" .btn .btn-default data-dismiss="modal">
                                 Cancel
-                            <form role=form method=post action="@{toMasterRoute $ PKCloudBlogDeleteR $ pkPostLink post}" enctype=#{deleteE} ##{deleteFormId}>
+                            <form role=form method=post action="@{toMasterRoute $ PKCloudBlogDeleteR year month day $ pkPostLink post}" enctype=#{deleteE} ##{deleteFormId}>
                                 ^{deleteW}
                                 <button type="submit" .btn .btn-danger>
                                     Delete
@@ -108,12 +108,12 @@ renderEditHelper postId = do
         return (tag ^. pkPostTagTagField)
     return (tags, oldTags)
 
-getPKCloudBlogEditR :: forall site post tag . PostLink -> Handler site post tag Html
-getPKCloudBlogEditR slug = do
+getPKCloudBlogEditR :: forall site post tag . PostYear -> PostMonth -> PostDay -> PostLink -> Handler site post tag Html
+getPKCloudBlogEditR year month day slug = do
     _ <- requireBlogUserId
 
     -- Lookup post.
-    postM :: Maybe (Entity post) <- lift $ runDB' $ getBy $ pkPostUniqueLink slug
+    postM :: Maybe (Entity post) <- lift $ runDB' $ getBy $ pkPostUniqueLink year month day slug
     case postM of
         Nothing ->
             lift notFound
@@ -128,14 +128,14 @@ getPKCloudBlogEditR slug = do
             form <- lift $ generateFormPost $ renderEditForm post autoTags oldTags
 
             -- Generate HTML.
-            generateHTML post form
+            generateHTML year month day post form
 
-postPKCloudBlogEditR :: forall site post tag . PostLink -> Handler site post tag Html
-postPKCloudBlogEditR slug = do
+postPKCloudBlogEditR :: forall site post tag . PostYear -> PostMonth -> PostDay -> PostLink -> Handler site post tag Html
+postPKCloudBlogEditR year month day slug = do
     _ <- requireBlogUserId
 
     -- Lookup post.
-    postM :: Maybe (Entity post) <- lift $ runDB' $ getBy $ pkPostUniqueLink slug
+    postM :: Maybe (Entity post) <- lift $ runDB' $ getBy $ pkPostUniqueLink year month day slug
     case postM of
         Nothing ->
             lift notFound
@@ -151,18 +151,19 @@ postPKCloudBlogEditR slug = do
             case result of
                 FormMissing -> do
                     lift $ pkcloudSetMessageDanger "Editing post failed."
-                    generateHTML post (formW, formE)
+                    generateHTML year month day post (formW, formE)
                 FormFailure _msg -> do
                     lift $ pkcloudSetMessageDanger "Editing post failed."
-                    generateHTML post (formW, formE)
+                    generateHTML year month day post (formW, formE)
                 FormSuccess (FormData title content' tagsM published) -> do
                     -- Update post.
                     let content = unTextarea content'
                     let preview = makeBlogPreview content
                     let author = pkPostAuthor post
                     let date = pkPostDate post
+                    let (year, month, day) = splitDate date
                     editDate <- getCurrentTime
-                    let newPost = pkPost author slug date published title content preview (Just editDate)
+                    let newPost = pkPost author slug date published title content preview (Just editDate) year month day
                     lift $ runDB' $ do
                         -- Update post.
                         replace postId newPost
@@ -179,14 +180,14 @@ postPKCloudBlogEditR slug = do
                     lift $ pkcloudSetMessageSuccess "Successfully edited post!"
 
                     -- Redirect.
-                    redirect $ PKCloudBlogEditR slug
+                    redirect $ PKCloudBlogEditR year month day slug
 
 -- Delete post handler.
-postPKCloudBlogDeleteR :: forall site post tag . PostLink -> Handler site post tag Html
-postPKCloudBlogDeleteR slug = do
+postPKCloudBlogDeleteR :: forall site post tag . PostYear -> PostMonth -> PostDay -> PostLink -> Handler site post tag Html
+postPKCloudBlogDeleteR year month day slug = do
     _ <- requireBlogUserId
     -- Lookup post.
-    postM :: Maybe (Entity post) <- lift $ runDB' $ getBy $ pkPostUniqueLink slug
+    postM :: Maybe (Entity post) <- lift $ runDB' $ getBy $ pkPostUniqueLink year month day slug
     case postM of
         Nothing ->
             lift notFound
@@ -201,10 +202,10 @@ postPKCloudBlogDeleteR slug = do
             case result of
                 FormMissing -> do
                     lift $ pkcloudSetMessageDanger "Deleting post failed."
-                    redirect $ PKCloudBlogEditR slug
+                    redirect $ PKCloudBlogEditR year month day slug
                 FormFailure _msg -> do
                     lift $ pkcloudSetMessageDanger "Deleting post failed."
-                    redirect $ PKCloudBlogEditR slug
+                    redirect $ PKCloudBlogEditR year month day slug
                 FormSuccess () -> do
                     -- Delete post.
                     lift $ runDB' $ do

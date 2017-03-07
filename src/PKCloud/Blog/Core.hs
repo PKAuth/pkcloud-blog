@@ -18,6 +18,7 @@ import qualified Data.Time.Format as Time
 import qualified Text.Markdown as Markdown
 
 import PKCloud.Import
+import PKCloud.Blog.Import as Export
 import PKCloud.Blog.Routes as Export
 
 -- data PKCloudBlogApp = PKCloudBlogApp
@@ -32,12 +33,15 @@ type PostPublished = Bool
 
 class (SubEntity post, SubEntity tag, PKCloudSecurityPermissions master post, PKCloud master) => PKCloudBlog master post tag | master -> post, post -> master, master -> tag, tag -> master where
     -- | Post datatype and getters.
-    pkPost :: AuthId master -> PostLink -> UTCTime -> PostPublished -> PostTitle -> PostContent -> PostPreview -> Maybe UTCTime -> post
+    pkPost :: AuthId master -> PostLink -> UTCTime -> PostPublished -> PostTitle -> PostContent -> PostPreview -> Maybe UTCTime -> Int -> Int -> Int -> post
     pkPostIdField :: EntityField post (Key post)
     pkPostAuthor :: post -> AuthId master
     pkPostAuthorField :: EntityField post (AuthId master)
     pkPostLink :: post -> PostLink
-    pkPostUniqueLink :: PostLink -> Unique post
+    pkPostYear :: post -> PostYear
+    pkPostMonth :: post -> PostMonth
+    pkPostDay :: post -> PostDay
+    pkPostUniqueLink :: PostYear -> PostMonth -> PostDay -> PostLink -> Unique post
     pkPostDate :: post -> UTCTime
     pkPostDateField :: EntityField post UTCTime
     pkPostPublished :: post -> PostPublished
@@ -104,7 +108,7 @@ pkBlogDisplayPreview :: forall site post tag . (PKCloudBlog site post tag, ToMas
 pkBlogDisplayPreview (Entity _ post) = do
     author <- handlerToWidget $ pkcloudDisplayName $ pkPostAuthor post
     authorIdent <- handlerToWidget $ pkcloudUniqueUsername $ pkPostAuthor post
-    let postRoute = toMasterRoute $ PKCloudBlogPostR $ pkPostLink post
+    let postRoute = toMasterRoute $ PKCloudBlogPostR (pkPostYear post) (pkPostMonth post) (pkPostDay post) $ pkPostLink post
     [whamlet|
         <div .blog-preview>
             <h3 .blog-title>

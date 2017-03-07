@@ -19,6 +19,7 @@ library
   other-modules:       
                        Import
                        PKCloud.Blog.Core
+                       PKCloud.Blog.Import
                        PKCloud.Blog.Routes
                        PKCloud.Blog.Handler.Author
                        PKCloud.Blog.Handler.Edit

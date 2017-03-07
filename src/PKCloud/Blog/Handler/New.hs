@@ -34,9 +34,10 @@ renderNewForm :: [Text] -> MasterForm FormData
 renderNewForm tags markup = do
     titleId <- newFormIdent
     slugId <- newFormIdent
+    datePieces <- splitDate <$> getCurrentTime
     (res, widget') <- renderBootstrap3 BootstrapBasicForm (FormData
         <$> areq textField (withId titleId titleSettings) Nothing
-        <*> areq (checkM checkSlug textField) (withId slugId slugSettings) Nothing
+        <*> areq (checkM (checkSlug datePieces) textField) (withId slugId slugSettings) Nothing
         <*> areq textareaField contentSettings Nothing
         <*> aopt (tagField tags) tagSettings Nothing
         <*> areq (bootstrapCheckBoxField ("Publish" :: Text)) publishSettings (Just True)
@@ -63,10 +64,10 @@ renderNewForm tags markup = do
         tagSettings = withPlaceholder "Tags" $
             bfs ("Tags" :: Text)
 
-        checkSlug :: forall site post tag . (PKCloudBlog site post tag) => PostLink -> HandlerT site IO (Either Text PostLink)
-        checkSlug slug = do
+        checkSlug :: forall site post tag . (PKCloudBlog site post tag) => (Int, Int, Int) -> PostLink -> HandlerT site IO (Either Text PostLink)
+        checkSlug (year, month, day) slug = do
             -- Check that slug isn't used.
-            postM :: Maybe (Entity post) <- runDB' $ getBy $ pkPostUniqueLink slug
+            postM :: Maybe (Entity post) <- runDB' $ getBy $ pkPostUniqueLink year month day slug
             case postM of
                 Nothing ->
                     -- Checek that slug only is lowercase and dash characters.
@@ -129,7 +130,8 @@ postPKCloudBlogNewR = do
             let content = unTextarea content'
             let preview = makeBlogPreview content
             now <- getCurrentTime
-            let post :: post = pkPost userId slug now published title content preview Nothing
+            let (year, month, day) = splitDate now
+            let post :: post = pkPost userId slug now published title content preview Nothing year month day
 
             -- Check if user can create posts. 
             hasPermission <- lift $ pkcloudCanCreate post
@@ -152,5 +154,5 @@ postPKCloudBlogNewR = do
                     lift $ pkcloudSetMessageSuccess "Successfully created post!"
 
                     -- Redirect to post's edit page. 
-                    redirect $ PKCloudBlogEditR slug
+                    redirect $ PKCloudBlogEditR year month day slug
 

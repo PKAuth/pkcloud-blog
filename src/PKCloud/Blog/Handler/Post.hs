@@ -2,10 +2,10 @@ module PKCloud.Blog.Handler.Post where
 
 import Import
 
-getPKCloudBlogPostR :: forall site post tag . Text -> Handler site post tag Html
-getPKCloudBlogPostR slug = lift $ do
+getPKCloudBlogPostR :: forall site post tag . PostYear -> PostMonth -> PostDay -> Text -> Handler site post tag Html
+getPKCloudBlogPostR year month day slug = lift $ do
     -- Get post.
-    postM :: (Maybe (Entity post)) <- runDB' $ getBy $ pkPostUniqueLink slug
+    postM :: (Maybe (Entity post)) <- runDB' $ getBy $ pkPostUniqueLink year month day slug
     case postM of
         Nothing ->
             notFound
@@ -84,7 +84,7 @@ getPKCloudBlogPostR slug = lift $ do
             else
                 return $ Just [whamlet|
                     <div>
-                        <a .btn .btn-default .btn-lg .btn-block href="@{toMasterRoute $ PKCloudBlogEditR $ pkPostLink post}">
+                        <a .btn .btn-default .btn-lg .btn-block href="@{toMasterRoute $ PKCloudBlogEditR year month day $ pkPostLink post}">
                             Edit post
                 |]
 
