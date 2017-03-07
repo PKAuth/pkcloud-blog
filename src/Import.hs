@@ -84,10 +84,14 @@ makeBlogPreview orig =
     let lines = List.dropWhile isEmpty lines' in
 
     -- Grab the first three paragraphs.
-    let preview = toPreviewHelper 3 lines in
+    let preview' = toPreviewHelper 3 lines in
 
     -- Join preview lines. 
-    Text.unlines preview
+    let preview = Text.unlines preview' in
+
+    -- Close any open code blocks.
+    closeCodeBlocks preview
+
 
     where
         toPreviewHelper :: Int -> [Text] -> [Text]
@@ -98,6 +102,23 @@ makeBlogPreview orig =
             para ++ spaces ++ toPreviewHelper (c - 1) rest
 
         isEmpty t = "" == Text.strip t
+
+        closeCodeBlocks p = 
+            -- Counts of "```"
+            let (_, count) = Text.foldl' (\(c, acc) char -> 
+                    if char == '`' then
+                        case c of
+                            Just c | c >= 2 -> (Nothing, acc + 1)
+                            Just c -> (Just (c + 1), acc)
+                            Nothing -> (Just 1, acc)
+                    else
+                        (Nothing, acc)
+                  ) (Nothing, 0 :: Int) p
+            in
+            if odd count then
+                p <> "```"
+            else
+                p
 
 -- Make sure tags are only characters, underscores, or dashed.
 tagField :: forall m . (Monad m, RenderMessage (HandlerSite m) FormMessage) => [Text] -> Field m [Text]
