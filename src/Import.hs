@@ -21,6 +21,7 @@ module Import (
 import Control.Monad as Export (when)
 import qualified Data.Aeson as Aeson
 import qualified Data.Char as Char
+import Database.Esqueleto (Value)
 import qualified Data.List as List
 import qualified Data.Text as Text
 import PKCloud.Import as Export
