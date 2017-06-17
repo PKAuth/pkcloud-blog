@@ -67,7 +67,7 @@ renderNewForm tags markup = do
         checkSlug :: forall site post tag . (PKCloudBlog site post tag) => (Int, Int, Int) -> PostLink -> HandlerT site IO (Either Text PostLink)
         checkSlug (year, month, day) slug = do
             -- Check that slug isn't used.
-            postM :: Maybe (Entity post) <- runDB' $ getBy $ pkPostUniqueLink year month day slug
+            postM :: Maybe (Entity post) <- runDB $ getBy $ pkPostUniqueLink year month day slug
             case postM of
                 Nothing ->
                     -- Checek that slug only is lowercase and dash characters.
@@ -139,7 +139,7 @@ postPKCloudBlogNewR = do
                 lift $ permissionDenied "You do not have permission to do that."
 
             -- Insert post.
-            postM <- lift $ runDB' $ insertUnique post
+            postM <- lift $ runDB $ insertUnique post
             case postM of
                 Nothing -> do
                     -- Set message.
@@ -148,7 +148,7 @@ postPKCloudBlogNewR = do
                 Just postId -> do
                     -- Insert tags.
                     let tags = maybe [] id tagsM
-                    lift $ runDB' $ mapM_ (insert_ . pkPostTag postId) tags
+                    lift $ runDB $ mapM_ (insert_ . pkPostTag postId) tags
 
                     -- Set message.
                     lift $ pkcloudSetMessageSuccess "Successfully created post!"

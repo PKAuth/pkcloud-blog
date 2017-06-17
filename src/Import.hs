@@ -70,7 +70,7 @@ requireBlogUserId = do
 getAutocompleteTags :: forall site post tag . (PKCloudBlog site post tag) => HandlerT site IO [Text]
 getAutocompleteTags = do
     -- Get distinct tags from DB.
-    tags <- runDB' $ select $ distinct $ from $ \(tag :: SqlExpr (Entity tag)) -> do
+    tags <- runDB $ select $ distinct $ from $ \(tag :: SqlExpr (Entity tag)) -> do
         return (tag ^. pkPostTagTagField)
     return $ fmap unValue tags
 

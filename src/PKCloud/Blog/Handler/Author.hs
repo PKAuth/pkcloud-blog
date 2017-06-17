@@ -21,7 +21,7 @@ getPostsHelper page author = do
             queryFilters <- generatePostFilters
 
             -- Get posts.
-            posts <- lift $ runDB' $ select $ from $ \p -> do
+            posts <- lift $ runDB $ select $ from $ \p -> do
                 where_ (p ^. pkPostAuthorField ==. val uId &&. queryFilters p)
                 limit qLimit
                 offset qOffset

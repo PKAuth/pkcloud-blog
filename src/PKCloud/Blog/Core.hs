@@ -70,7 +70,7 @@ class (SubEntity post, SubEntity tag, PKCloudSecurityPermissions master post, PK
 -- | Retrieves the n most recent posts.
 pkBlogRetrievePosts :: forall site post tag . (PKCloudBlog site post tag) => Int -> HandlerT site IO [Entity post]
 pkBlogRetrievePosts n = do
-    runDB' $ select $ from $ \p -> do
+    runDB $ select $ from $ \p -> do
         where_ (p ^. pkPostPublishedField ==. val True)
         limit (fromInteger $ toInteger n)
         orderBy [desc (p ^. pkPostDateField)]

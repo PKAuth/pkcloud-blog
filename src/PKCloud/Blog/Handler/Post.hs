@@ -5,7 +5,7 @@ import Import
 getPKCloudBlogPostR :: forall site post tag . PostYear -> PostMonth -> PostDay -> Text -> Handler site post tag Html
 getPKCloudBlogPostR year month day slug = lift $ do
     -- Get post.
-    postM :: (Maybe (Entity post)) <- runDB' $ getBy $ pkPostUniqueLink year month day slug
+    postM :: (Maybe (Entity post)) <- runDB $ getBy $ pkPostUniqueLink year month day slug
     case postM of
         Nothing ->
             notFound
@@ -48,7 +48,7 @@ getPKCloudBlogPostR year month day slug = lift $ do
     where
         tagsW postId = do
             -- Get tags.
-            tags <- handlerToWidget $ runDB' $ select $ from $ \tag -> do
+            tags <- handlerToWidget $ runDB $ select $ from $ \tag -> do
                 where_ (tag ^. pkPostTagPostField ==. val postId)
                 return tag
             

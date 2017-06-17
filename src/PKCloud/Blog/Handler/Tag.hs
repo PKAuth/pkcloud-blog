@@ -9,7 +9,7 @@ getPostsHelper page tag = do
     queryFilters <- generatePostFilters
 
     -- Get posts.
-    posts <- lift $ runDB' $ select $ from $ \(InnerJoin p t) -> do
+    posts <- lift $ runDB $ select $ from $ \(InnerJoin p t) -> do
         on (p ^. pkPostIdField ==. t ^. pkPostTagPostField)
         where_ (t ^. pkPostTagTagField ==. val tag &&. queryFilters p)
         limit qLimit

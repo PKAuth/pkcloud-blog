@@ -103,7 +103,7 @@ renderDeleteForm = renderDivs $ pure ()
 renderEditHelper :: forall site post tag . Key post -> Handler site post tag ([Text], [Text])
 renderEditHelper postId = do
     tags <- lift $ getAutocompleteTags
-    oldTags <- fmap (fmap unValue) $ lift $ runDB' $ select $ from $ \tag -> do
+    oldTags <- fmap (fmap unValue) $ lift $ runDB $ select $ from $ \tag -> do
         where_ (tag ^. pkPostTagPostField ==. val postId)
         return (tag ^. pkPostTagTagField)
     return (tags, oldTags)
@@ -113,7 +113,7 @@ getPKCloudBlogEditR year month day slug = do
     _ <- requireBlogUserId
 
     -- Lookup post.
-    postM :: Maybe (Entity post) <- lift $ runDB' $ getBy $ pkPostUniqueLink year month day slug
+    postM :: Maybe (Entity post) <- lift $ runDB $ getBy $ pkPostUniqueLink year month day slug
     case postM of
         Nothing ->
             lift notFound
@@ -135,7 +135,7 @@ postPKCloudBlogEditR year month day slug = do
     _ <- requireBlogUserId
 
     -- Lookup post.
-    postM :: Maybe (Entity post) <- lift $ runDB' $ getBy $ pkPostUniqueLink year month day slug
+    postM :: Maybe (Entity post) <- lift $ runDB $ getBy $ pkPostUniqueLink year month day slug
     case postM of
         Nothing ->
             lift notFound
@@ -164,7 +164,7 @@ postPKCloudBlogEditR year month day slug = do
                     let (year, month, day) = splitDate date
                     editDate <- getCurrentTime
                     let newPost = pkPost author slug date published title content preview (Just editDate) year month day
-                    lift $ runDB' $ do
+                    lift $ runDB $ do
                         -- Update post.
                         replace postId newPost
 
@@ -187,7 +187,7 @@ postPKCloudBlogDeleteR :: forall site post tag . PostYear -> PostMonth -> PostDa
 postPKCloudBlogDeleteR year month day slug = do
     _ <- requireBlogUserId
     -- Lookup post.
-    postM :: Maybe (Entity post) <- lift $ runDB' $ getBy $ pkPostUniqueLink year month day slug
+    postM :: Maybe (Entity post) <- lift $ runDB $ getBy $ pkPostUniqueLink year month day slug
     case postM of
         Nothing ->
             lift notFound
@@ -208,7 +208,7 @@ postPKCloudBlogDeleteR year month day slug = do
                     redirect $ PKCloudBlogEditR year month day slug
                 FormSuccess () -> do
                     -- Delete post.
-                    lift $ runDB' $ do
+                    lift $ runDB $ do
                         delete $ from $ \tag -> do
                             where_ (tag ^. pkPostTagPostField ==. val postId)
                         

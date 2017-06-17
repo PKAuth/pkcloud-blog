@@ -19,7 +19,7 @@ getPostsHelper page = do
     -- Check if we should filter unpublished posts.
     queryFilters <- generatePostFilters
 
-    posts <- lift $ runDB' $ select $ from $ \p -> do
+    posts <- lift $ runDB $ select $ from $ \p -> do
         where_ $ queryFilters p
         limit qLimit
         offset qOffset
