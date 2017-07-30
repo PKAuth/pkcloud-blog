@@ -35,7 +35,7 @@ class (SubEntity post, SubEntity tag, PKCloudSecurityPermissions master post, PK
     -- | Post datatype and getters.
     pkPost :: AuthId master -> PostLink -> UTCTime -> PostPublished -> PostTitle -> PostContent -> PostPreview -> Maybe UTCTime -> Int -> Int -> Int -> post
     pkPostIdField :: EntityField post (Key post)
-    pkPostAuthor :: post -> AuthId master
+    pkPostAuthor :: post -> AuthId master -- | Author. Should be an index.
     pkPostAuthorField :: EntityField post (AuthId master)
     pkPostLink :: post -> PostLink
     pkPostYear :: post -> PostYear
@@ -54,9 +54,9 @@ class (SubEntity post, SubEntity tag, PKCloudSecurityPermissions master post, PK
     pkPostEditDateField :: EntityField post (Maybe UTCTime)
 
     pkPostTag :: Key post -> Text -> tag
-    pkPostTagPost :: tag -> Key post
+    pkPostTagPost :: tag -> Key post -- | Post. Should be an index.
     pkPostTagPostField :: EntityField tag (Key post)
-    pkPostTagTag :: tag -> Text
+    pkPostTagTag :: tag -> Text -- | Tag. Should be an index.
     pkPostTagTagField :: EntityField tag Text
 
     -- | Route to link to from a author's name. 
