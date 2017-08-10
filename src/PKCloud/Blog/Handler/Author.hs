@@ -27,25 +27,40 @@ getPostsHelper page author = do
                 offset qOffset
                 orderBy [desc (p ^. pkPostDateField)]
                 return p
-            
+
             username <- lift $ pkcloudDisplayName uId
             let title = "Posts by " <> username
             lift $ pkcloudDefaultLayout PKCloudBlogApp title $ do
                 pkcloudSetTitle $ toHtml title
 
-                -- Display previews.
+                -- Make columns.
+                sidebar <- sidebarW uId
+                let cols = makeColumns sidebar $
+                      -- Display previews.
+                      displayPostPreviews posts page postsPerPage (PKCloudBlogAuthorR author) (PKCloudBlogAuthorPageR author)
+
                 [whamlet|
                     <div .container>
                         <div .row>
-                            <div .col-sm-8>
-                                ^{displayPostPreviews posts page postsPerPage (PKCloudBlogAuthorR author) (PKCloudBlogAuthorPageR author)}
-                            <div .col-sm-4>
+                            ^{cols}
                 |]
     where
         postsPerPage :: Int64
         postsPerPage = 10
         qLimit = postsPerPage + 1
         qOffset = (page - 1) * postsPerPage
+
+        sidebarW authorId = do
+            -- If current user is the author, show the new post button.
+            userIdM <- handlerToWidget maybeAuthId
+            if userIdM == Just authorId then
+                return $ Just [whamlet|
+                    <div>
+                        <a .btn .btn-default .btn-lg .btn-block href="@{toMasterRoute PKCloudBlogNewR}">
+                            New post
+                |]
+            else
+                return Nothing
 
 
 getPKCloudBlogAuthorR :: forall site post tag . Text -> Handler site post tag Html
