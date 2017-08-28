@@ -114,6 +114,9 @@ pkBlogDisplayPreview (Entity _ post) = do
             <h3 .blog-title>
                 <a href="@{postRoute}">
                     #{pkPostTitle post}
+                <small>
+                    <a href="#">
+                        Edit
             <div .text-muted>
                 By <a href="@{pkBlogAuthorRoute authorIdent}">#{author}</a> - #{pkBlogRenderDayLong $ pkPostDate post}
             <div .blog-content>

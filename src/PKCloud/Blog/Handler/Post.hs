@@ -5,45 +5,42 @@ import Import
 getPKCloudBlogPostR :: forall site post tag . PostYear -> PostMonth -> PostDay -> Text -> Handler site post tag Html
 getPKCloudBlogPostR year month day slug = lift $ do
     -- Get post.
-    postM :: (Maybe (Entity post)) <- runDB $ getBy $ pkPostUniqueLink year month day slug
-    case postM of
-        Nothing ->
-            notFound
-        Just (Entity postId post) -> do
-            -- Check if not published.
-            when (not $ pkPostPublished post) 
-                notFound
+    (Entity postId post) :: (Entity post) <- runDB $ getBy404 $ pkPostUniqueLink year month day slug
 
-            pkcloudDefaultLayout PKCloudBlogApp (pkPostTitle post) $ do
-                pkcloudSetTitle $ toHtml $ pkPostTitle post
-                let author :: AuthId site = pkPostAuthor post
-                authorName <- handlerToWidget $ pkcloudDisplayName author
-                authorIdent <- handlerToWidget $ pkcloudUniqueUsername $ author
-                toWidget [lucius|
-                    .blog-title {
-                        margin-bottom: 3px;
-                    }
+    -- Check if not published.
+    when (not $ pkPostPublished post) 
+        notFound
 
-                    .blog-content {
-                        margin-top: 20px;
-                        margin-bottom: 35px;
-                    }
-                |]
-                sidebarM <- sidebarW post
-                let cols = makeColumns sidebarM [whamlet|
-                    <h2 .blog-title>
-                        #{pkPostTitle post}
-                    <div .text-muted>
-                        By <a href="@{pkBlogAuthorRoute authorIdent}">#{authorName}</a> - #{pkBlogRenderDayLong $ pkPostDate post}
-                    <div .blog-content>
-                        #{pkBlogRenderContent $ pkPostContent post}
-                    ^{tagsW postId}
-                |]
-                [whamlet|
-                    <div .container>
-                        <div .row>
-                            ^{cols}
-                |]
+    pkcloudDefaultLayout PKCloudBlogApp (pkPostTitle post) $ do
+        pkcloudSetTitle $ toHtml $ pkPostTitle post
+        let author :: AuthId site = pkPostAuthor post
+        authorName <- handlerToWidget $ pkcloudDisplayName author
+        authorIdent <- handlerToWidget $ pkcloudUniqueUsername $ author
+        toWidget [lucius|
+            .blog-title {
+                margin-bottom: 3px;
+            }
+
+            .blog-content {
+                margin-top: 20px;
+                margin-bottom: 35px;
+            }
+        |]
+        sidebarM <- sidebarW post
+        let cols = makeColumns sidebarM [whamlet|
+            <h2 .blog-title>
+                #{pkPostTitle post}
+            <div .text-muted>
+                By <a href="@{pkBlogAuthorRoute authorIdent}">#{authorName}</a> - #{pkBlogRenderDayLong $ pkPostDate post}
+            <div .blog-content>
+                #{pkBlogRenderContent $ pkPostContent post}
+            ^{tagsW postId}
+        |]
+        [whamlet|
+            <div .container>
+                <div .row>
+                    ^{cols}
+        |]
 
     where
         tagsW postId = do
