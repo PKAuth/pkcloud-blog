@@ -8,8 +8,15 @@ getPKCloudBlogPostR year month day slug = lift $ do
     (Entity postId post) :: (Entity post) <- runDB $ getBy404 $ pkPostUniqueLink year month day slug
 
     -- Check if not published.
-    when (not $ pkPostPublished post) 
-        notFound
+    when (not $ pkPostPublished post) $ do
+
+        -- Redirect to edit if use is author.
+        canEdit <- pkcloudCanWrite post
+        if canEdit then
+            let route = toMasterRoute $ PKCloudBlogEditR year month day slug :: Route site in
+            redirect route
+        else
+            notFound
 
     pkcloudDefaultLayout PKCloudBlogApp (pkPostTitle post) $ do
         pkcloudSetTitle $ toHtml $ pkPostTitle post

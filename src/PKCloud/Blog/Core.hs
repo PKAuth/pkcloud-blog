@@ -12,7 +12,7 @@ module PKCloud.Blog.Core (
     , PostPublished
     ) where
 
--- import Control.Monad
+import Control.Monad (when)
 import qualified Data.Text.Lazy as TextL
 import qualified Data.Time.Format as Time
 import qualified Text.Markdown as Markdown
@@ -108,15 +108,24 @@ pkBlogDisplayPreview :: forall site post tag . (PKCloudBlog site post tag, ToMas
 pkBlogDisplayPreview (Entity _ post) = do
     author <- handlerToWidget $ pkcloudDisplayName $ pkPostAuthor post
     authorIdent <- handlerToWidget $ pkcloudUniqueUsername $ pkPostAuthor post
-    let postRoute = toMasterRoute $ PKCloudBlogPostR (pkPostYear post) (pkPostMonth post) (pkPostDay post) $ pkPostLink post
+    let postRouteConst = if pkPostPublished post then
+            PKCloudBlogPostR
+          else
+            PKCloudBlogEditR
+    let postRoute = toMasterRoute $ postRouteConst (pkPostYear post) (pkPostMonth post) (pkPostDay post) $ pkPostLink post
+
+    let unpublishedW = when (not $ pkPostPublished post) $ [whamlet|
+            <small .unpublished>
+                <span .label .label-default>
+                    Unpublished
+        |]
+
     [whamlet|
         <div .blog-preview>
             <h3 .blog-title>
                 <a href="@{postRoute}">
                     #{pkPostTitle post}
-                <small>
-                    <a href="#">
-                        Edit
+                ^{unpublishedW}
             <div .text-muted>
                 By <a href="@{pkBlogAuthorRoute authorIdent}">#{author}</a> - #{pkBlogRenderDayLong $ pkPostDate post}
             <div .blog-content>
