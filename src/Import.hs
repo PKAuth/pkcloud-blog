@@ -239,6 +239,12 @@ displayPostPreviews posts page postsPerPage route routePage =
                     margin-top: 15px;
                     margin-bottom: 35px;
                 }
+
+                .unpublished span {
+                    top: -.3em;
+                    position: relative;
+                    margin-left: 5px;
+                }
             |]
 
             [whamlet|

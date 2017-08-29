@@ -103,6 +103,7 @@ pkBlogRenderDayLong = Time.formatTime Time.defaultTimeLocale "%B %e, %Y"
 instance PKCloudApp PKCloudBlogApp where
     pkcloudAppName PKCloudBlogApp = "Blog"
     pkcloudAppIdentifier PKCloudBlogApp = "blog"
+    pkcloudAppRoot = PKCloudBlogRootR
 
 pkBlogDisplayPreview :: forall site post tag . (PKCloudBlog site post tag, ToMasterRoute PKCloudBlogApp site) => Entity post -> WidgetT site IO ()
 pkBlogDisplayPreview (Entity _ post) = do
