@@ -25,7 +25,7 @@ generateHTML (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp "New 
                         <div .form-group .optional .pull-right>
                             <a href="#" .btn .btn-default>
                                 Preview
-                            <button type="submit" name="create" .btn .btn-primary>
+                            <button type="submit" name="create" value="create" .btn .btn-primary>
                                 Create
                         <div .clearfix>
     |]
