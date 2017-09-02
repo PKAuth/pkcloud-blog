@@ -4,6 +4,7 @@ module PKCloud.Blog.Core (
     , pkBlogRetrievePosts
     , pkBlogRenderContent
     , pkBlogDisplayPreview
+    , pkBlogRenderBlog
     , pkBlogRenderDayLong
     , PostLink
     , PostTitle
@@ -31,7 +32,7 @@ type PostContent = Text
 type PostPublished = Bool
 -- type PostEditPublished = Bool
 
-class (SubEntity post, SubEntity tag, PKCloudSecurityPermissions master post, PKCloud master) => PKCloudBlog master post tag | master -> post, post -> master, master -> tag, tag -> master where
+class (SubEntity post, SubEntity tag, PKCloudSecurityPermissions master post, PKCloud master, ToJSON post, FromJSON post) => PKCloudBlog master post tag | master -> post, post -> master, master -> tag, tag -> master where
     -- | Post datatype and getters.
     pkPost :: AuthId master -> PostLink -> UTCTime -> PostPublished -> PostTitle -> PostContent -> PostPreview -> Maybe UTCTime -> Int -> Int -> Int -> post
     pkPostIdField :: EntityField post (Key post)
@@ -99,6 +100,9 @@ pkBlogRenderContent = Markdown.markdown Markdown.def . TextL.fromStrict
 -- | Render a date with a long format.
 pkBlogRenderDayLong :: UTCTime -> String
 pkBlogRenderDayLong = Time.formatTime Time.defaultTimeLocale "%B %e, %Y"
+
+pkBlogRenderBlog :: PKCloudBlog master post tag => post -> [Text] -> Html
+pkBlogRenderBlog post _ = pkBlogRenderContent $ pkPostContent post
 
 instance PKCloudApp PKCloudBlogApp where
     pkcloudAppName PKCloudBlogApp = "Blog"
