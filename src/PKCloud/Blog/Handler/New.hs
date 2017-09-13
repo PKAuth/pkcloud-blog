@@ -1,5 +1,7 @@
-module PKCloud.Blog.Handler.New (getPKCloudBlogNewR, postPKCloudBlogNewR) where
+module PKCloud.Blog.Handler.New (getPKCloudBlogNewR, postPKCloudBlogNewR, getPKCloudBlogPreviewR) where
 
+import qualified Data.Aeson as Aeson
+import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 
@@ -23,9 +25,9 @@ generateHTML (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp "New 
                     <form role=form method=post action="@{toMasterRoute PKCloudBlogNewR}" enctype=#{formEnc}>
                         ^{formW}
                         <div .form-group .optional .pull-right>
-                            <a href="#" .btn .btn-default>
+                            <button type="submit" name="submit" value="preview" .btn .btn-default>
                                 Preview
-                            <button type="submit" name="create" .btn .btn-primary>
+                            <button type="submit" name="submit" value="create" .btn .btn-primary>
                                 Create
                         <div .clearfix>
     |]
@@ -114,7 +116,6 @@ getPKCloudBlogNewR = do
 postPKCloudBlogNewR :: forall site post tag . Handler site post tag Html
 postPKCloudBlogNewR = do
     userId <- requireBlogUserId
-
     -- Parse POST.
     tags <- lift getAutocompleteTags
     ((result, formW), formE) <- lift $ runFormPost $ renderNewForm tags
@@ -126,18 +127,29 @@ postPKCloudBlogNewR = do
             lift $ pkcloudSetMessageDanger "Creating post failed."
             generateHTML (formW, formE)
         FormSuccess (FormData title slug content' tagsM published) -> do
+
             -- Create post.
             let content = unTextarea content'
             let preview = makeBlogPreview content
             now <- getCurrentTime
             let (year, month, day) = splitDate now
             let post :: post = pkPost userId slug now published title content preview Nothing year month day
+            let tags = maybe [] id tagsM
 
             -- Check if user can create posts. 
             hasPermission <- lift $ pkcloudCanCreate post
             when (not hasPermission) $ 
                 lift $ permissionDenied "You do not have permission to do that."
 
+            -- Check if preview was pressed or create 
+            res <- lookupPostParam "submit"
+            case res of
+                Just "preview" -> do
+                    previewPost post tags 
+                _ -> do 
+                    createPost formW formE tags post slug year month day
+    where
+        createPost formW formE tags post slug year month day = do
             -- Insert post.
             postM <- lift $ runDB $ insertUnique post
             case postM of
@@ -147,7 +159,6 @@ postPKCloudBlogNewR = do
                     generateHTML (formW, formE)
                 Just postId -> do
                     -- Insert tags.
-                    let tags = maybe [] id tagsM
                     lift $ runDB $ mapM_ (insert_ . pkPostTag postId) tags
 
                     -- Set message.
@@ -155,4 +166,25 @@ postPKCloudBlogNewR = do
 
                     -- Redirect to post's edit page. 
                     redirect $ PKCloudBlogEditR year month day slug
+        previewPost post tags = do
+           -- Save post data into cookie
+           -- Aeson Encode the post and tags
+            setSessionBS pkcloudBlogPreviewNewKey $ BSL.toStrict $ Aeson.encode (post, tags)
+            redirect $ PKCloudBlogPreviewR 
 
+pkcloudBlogPreviewNewKey :: Text
+pkcloudBlogPreviewNewKey = "pkcloud-blog-preview-new"
+getPKCloudBlogPreviewR :: forall site post tag . Handler site post tag Html 
+getPKCloudBlogPreviewR = do
+    aesonByteStringM <- lookupSessionBS pkcloudBlogPreviewNewKey
+    case Aeson.decodeStrict =<< aesonByteStringM of 
+        Nothing -> do 
+            lift $ pkcloudSetMessageWarning "Post not found."
+            redirect $ PKCloudBlogNewR
+        Just ((post :: post), tags) -> do
+           --display post
+            lift $ pkcloudDefaultLayout PKCloudBlogApp "Preview Post" $ do
+                pkcloudSetTitle "Preview Post"
+                [whamlet|
+                    #{pkBlogRenderBlog post tags}
+                |] 
