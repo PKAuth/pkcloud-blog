@@ -124,8 +124,8 @@ makeBlogPreview orig =
 -- Make sure tags are only characters, underscores, or dashed.
 tagField :: forall m . (Monad m, RenderMessage (HandlerSite m) FormMessage) => [Text] -> Field m [Text]
 tagField tags = check (\tags -> 
-        if List.any (not . Text.all (\c -> Char.isAlphaNum c || c == '-' || c == '_')) tags then
-            Left ("Tags may only contain alphanumeric characters, underscores, or dashes." :: Text)
+        if List.any (not . Text.all (\c -> Char.isLower c || Char.isDigit c || c == '-' || c == '_')) tags then
+            Left ("Tags may only contain lowercase alphanumeric characters, underscores, or dashes." :: Text)
         else
             Right tags
     ) $ autocompleteTextField tags
