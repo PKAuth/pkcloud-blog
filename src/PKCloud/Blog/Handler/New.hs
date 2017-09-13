@@ -186,5 +186,5 @@ getPKCloudBlogPreviewR = do
             lift $ pkcloudDefaultLayout PKCloudBlogApp "Preview Post" $ do
                 pkcloudSetTitle "Preview Post"
                 [whamlet|
-                    #{pkBlogRenderBlog post tags}
+                    ^{pkBlogRenderBlog post tags}
                 |] 

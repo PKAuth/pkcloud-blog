@@ -101,8 +101,62 @@ pkBlogRenderContent = Markdown.markdown Markdown.def . TextL.fromStrict
 pkBlogRenderDayLong :: UTCTime -> String
 pkBlogRenderDayLong = Time.formatTime Time.defaultTimeLocale "%B %e, %Y"
 
-pkBlogRenderBlog :: PKCloudBlog master post tag => post -> [Text] -> Html
-pkBlogRenderBlog post _ = pkBlogRenderContent $ pkPostContent post
+pkBlogRenderBlog :: forall master post tag . (ToMasterRoute PKCloudBlogApp master, PKCloudBlog master post tag) => post -> [Text] -> WidgetT master IO ()
+pkBlogRenderBlog post tags = do
+    let author :: AuthId master = pkPostAuthor post
+    authorName <- handlerToWidget $ pkcloudDisplayName author
+    authorIdent <- handlerToWidget $ pkcloudUniqueUsername $ author
+
+    toWidget [lucius|
+        .blog-title {
+            margin-bottom: 3px;
+        }
+
+        .blog-content {
+            margin-top: 20px;
+            margin-bottom: 35px;
+        }
+    |]
+
+    [whamlet|
+        <h2 .blog-title>
+            #{pkPostTitle post}
+        <div .text-muted>
+            By <a href="@{pkBlogAuthorRoute authorIdent}">#{authorName}</a> - #{pkBlogRenderDayLong $ pkPostDate post}
+        <div .blog-content>
+            #{pkBlogRenderContent $ pkPostContent post}
+        ^{tagsW}
+    |]
+
+    where
+
+        toMasterRoute' :: Route PKCloudBlogApp -> Route master
+        toMasterRoute' = toMasterRoute
+
+        tagsW = do
+            -- Display tags.
+            case tags of
+                [] ->
+                    mempty
+                _ -> do
+                    let tagsW' = mconcat $ fmap (\tag -> 
+                            [whamlet|
+                                <li role="presentation">
+                                    <a href="@{toMasterRoute' $ PKCloudBlogTagR tag}">
+                                        #{tag}
+                            |]
+                          ) tags
+                    tags <- newIdent
+                    toWidget [lucius|
+                        .#{tags} > li > a {
+                            background-color: rgb(246, 246, 246);
+                            margin: 0px 10px 10px 0px;
+                        }
+                    |]
+                    [whamlet|
+                        <ul .#{tags} .nav .nav-pills>
+                            ^{tagsW'}
+                    |]
 
 instance PKCloudApp PKCloudBlogApp where
     pkcloudAppName PKCloudBlogApp = "Blog"
