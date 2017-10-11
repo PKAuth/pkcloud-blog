@@ -1,5 +1,8 @@
 module PKCloud.Blog.Handler.Edit where
 
+import qualified Data.Aeson as Aeson
+import qualified Data.ByteString.Lazy as BSL
+
 import Import
 
 generateHTML :: forall site post tag . PostYear -> PostMonth -> PostDay -> post -> (MasterWidget site, Enctype) -> Handler site post tag Html
@@ -43,9 +46,9 @@ generateHTML year month day post (formW, formEnc) = lift $ pkcloudDefaultLayout 
                     <form role=form method=post action="@{toMasterRoute $ PKCloudBlogEditR year month day $ pkPostLink post}" enctype=#{formEnc}>
                         ^{formW}
                         <div .form-group .optional .pull-right>
-                            <a href="#" name="preview" .btn .btn-default>
+                            <button type="submit" name="submit" value="preview" .btn .btn-default>
                                 Preview
-                            <button type="submit" name="update" .btn .btn-primary>
+                            <button type="submit" name="submit" value="update" .btn .btn-primary>
                                 Update
                         <div .clearfix>
                 <div .col-sm-4>
@@ -130,6 +133,44 @@ getPKCloudBlogEditR year month day slug = do
             -- Generate HTML.
             generateHTML year month day post form
 
+getPKCloudBlogEditPreviewR :: forall site post tag . PostYear -> PostMonth -> PostDay -> PostLink -> Handler site post tag Html
+getPKCloudBlogEditPreviewR year month day slug = do
+    _ <- requireBlogUserId
+
+    -- Lookup post.
+    postM :: Maybe (Entity post) <- lift $ runDB $ getBy $ pkPostUniqueLink year month day slug
+    case postM of
+        Nothing ->
+            lift notFound
+        Just (Entity postId oldPost) -> do
+            -- Check if user can edit.
+            hasPermission <- lift $ pkcloudCanWrite oldPost
+            when (not hasPermission) $ 
+                lift $ permissionDenied "You do not have permission to edit this post."
+
+            -- Load preview.
+            aesonByteStringM <- lookupSessionBS $ pkcloudBlogPreviewEditKey postId
+            case Aeson.decodeStrict =<< aesonByteStringM of
+                Nothing -> do
+                    lift $ pkcloudSetMessageWarning "Preview not found."
+                    redirect $ PKCloudBlogEditR year month day slug
+                Just ((post :: post), tags) -> do
+            
+            
+            
+                    -- TODO: Generate form. XXX
+
+                    -- Display preview.
+                    lift $ pkcloudDefaultLayout PKCloudBlogApp "Preview Post" $ do
+                        pkcloudSetTitle "Preview Post"
+                        [whamlet|
+                            <div .container>
+                                <div .row>
+                                    <div .col-sm-8>
+                                        ^{pkBlogRenderBlog post tags}
+                        |] 
+
+            
 postPKCloudBlogEditR :: forall site post tag . PostYear -> PostMonth -> PostDay -> PostLink -> Handler site post tag Html
 postPKCloudBlogEditR year month day slug = do
     _ <- requireBlogUserId
@@ -144,6 +185,9 @@ postPKCloudBlogEditR year month day slug = do
             hasPermission <- lift $ pkcloudCanWrite post
             when (not hasPermission) $ 
                 lift $ permissionDenied "You do not have permission to edit this post."
+
+            -- Check if preview was pressed or update.
+            isPreview <- (== Just "preview") `fmap` lookupPostParam "submit"
             
             -- Parse form.
             (autoTags, oldTags) <- renderEditHelper postId
@@ -164,23 +208,45 @@ postPKCloudBlogEditR year month day slug = do
                     let (year, month, day) = splitDate date
                     editDate <- getCurrentTime
                     let newPost = pkPost author slug date published title content preview (Just editDate) year month day
-                    lift $ runDB $ do
-                        -- Update post.
-                        replace postId newPost
 
-                        -- Delete old tags.
-                        delete $ from $ \tag -> do
-                            where_ (tag ^. pkPostTagPostField ==. val postId)
+                    let tags = maybe [] id tagsM
 
-                        -- Insert new tags.
-                        let tags = maybe [] id tagsM
-                        mapM_ (insert_ . pkPostTag postId) tags
+                    -- Check if preview was pressed or update.
+                    if isPreview then
+                        previewPost postId newPost tags
+                    else
+                        updatePost postId newPost tags
 
-                    -- Set message.
-                    lift $ pkcloudSetMessageSuccess "Successfully edited post!"
+    where
+        previewPost postId post tags = do
+            -- Save data into cookie.
+            setSessionBS (pkcloudBlogPreviewEditKey postId) $ BSL.toStrict $ Aeson.encode (post, tags)
+            redirect $ PKCloudBlogEditPreviewR year month day slug
 
-                    -- Redirect.
-                    redirect $ PKCloudBlogEditR year month day slug
+        updatePost postId newPost tags = do
+            lift $ runDB $ do
+
+                -- Update post.
+                replace postId newPost
+
+                -- Delete old tags.
+                delete $ from $ \tag -> do
+                    where_ (tag ^. pkPostTagPostField ==. val postId)
+
+                -- Insert new tags.
+                mapM_ (insert_ . pkPostTag postId) tags
+
+            -- Delete any pending previews.
+            deleteSession $ pkcloudBlogPreviewEditKey postId
+
+            -- Set message.
+            lift $ pkcloudSetMessageSuccess "Successfully edited post!"
+
+            -- Redirect.
+            redirect $ PKCloudBlogEditR year month day slug
+
+pkcloudBlogPreviewEditKey :: PKCloudBlog master post tag => Key post -> Text
+pkcloudBlogPreviewEditKey postId = "pkcloud-blog-preview-edit-" <> toPathPiece postId
 
 -- Delete post handler.
 postPKCloudBlogDeleteR :: forall site post tag . PostYear -> PostMonth -> PostDay -> PostLink -> Handler site post tag Html

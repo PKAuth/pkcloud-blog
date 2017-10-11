@@ -14,6 +14,7 @@ mkYesodSubData "PKCloudBlogApp" [parseRoutes|
 /new PKCloudBlogNewR GET POST
 /preview PKCloudBlogPreviewR GET
 /edit/#PostYear/#PostMonth/#PostDay/#Text PKCloudBlogEditR GET POST
+/preview/#PostYear/#PostMonth/#PostDay/#Text PKCloudBlogEditPreviewR GET
 /delete/#PostYear/#PostMonth/#PostDay/#Text PKCloudBlogDeleteR POST
 /author/#Text PKCloudBlogAuthorR GET
 /author/#Text/#Int64 PKCloudBlogAuthorPageR GET

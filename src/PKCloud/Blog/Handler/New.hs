@@ -141,7 +141,7 @@ postPKCloudBlogNewR = do
             when (not hasPermission) $ 
                 lift $ permissionDenied "You do not have permission to do that."
 
-            -- Check if preview was pressed or create 
+            -- Check if preview was pressed or create.
             res <- lookupPostParam "submit"
             case res of
                 Just "preview" -> do
@@ -161,11 +161,15 @@ postPKCloudBlogNewR = do
                     -- Insert tags.
                     lift $ runDB $ mapM_ (insert_ . pkPostTag postId) tags
 
+                    -- Delete any saved previews.
+                    deleteSession pkcloudBlogPreviewNewKey
+
                     -- Set message.
                     lift $ pkcloudSetMessageSuccess "Successfully created post!"
 
                     -- Redirect to post's edit page. 
                     redirect $ PKCloudBlogEditR year month day slug
+
         previewPost post tags = do
            -- Save post data into cookie
            -- Aeson Encode the post and tags
@@ -174,15 +178,18 @@ postPKCloudBlogNewR = do
 
 pkcloudBlogPreviewNewKey :: Text
 pkcloudBlogPreviewNewKey = "pkcloud-blog-preview-new"
+
 getPKCloudBlogPreviewR :: forall site post tag . Handler site post tag Html 
 getPKCloudBlogPreviewR = do
+    -- TODO: Authenticate that the user can create posts (pkcloudCanCreate). XXX
+
     aesonByteStringM <- lookupSessionBS pkcloudBlogPreviewNewKey
     case Aeson.decodeStrict =<< aesonByteStringM of 
         Nothing -> do 
             lift $ pkcloudSetMessageWarning "Post not found."
             redirect $ PKCloudBlogNewR
         Just ((post :: post), tags) -> do
-           --display post
+            --display post
             lift $ pkcloudDefaultLayout PKCloudBlogApp "Preview Post" $ do
                 pkcloudSetTitle "Preview Post"
                 [whamlet|
