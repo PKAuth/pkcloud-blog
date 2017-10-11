@@ -15,6 +15,7 @@ module Import (
     , identToJavascript
     , generatePostFilters
     , displayPostPreviews
+    , displayPostPreviewsAsAuthor
     , makeColumns
     ) where
 
@@ -170,13 +171,21 @@ generatePostFilters = do
             return $ \p -> p ^. pkPostPublishedField ==. val True ||. p ^. pkPostAuthorField ==. val userId
 
 displayPostPreviews :: forall site post tag . (PKCloudBlog site post tag, ToMasterRoute PKCloudBlogApp site) => [Entity post] -> Int64 -> Int64 -> Route PKCloudBlogApp -> (Int64 -> Route PKCloudBlogApp) -> MasterWidget site
-displayPostPreviews posts page postsPerPage route routePage = 
+displayPostPreviews = displayPostPreviews' [whamlet|
+        There are no posts yet. Check back later!
+    |]
+
+displayPostPreviewsAsAuthor :: forall site post tag . (PKCloudBlog site post tag, ToMasterRoute PKCloudBlogApp site) => [Entity post] -> Int64 -> Int64 -> Route PKCloudBlogApp -> (Int64 -> Route PKCloudBlogApp) -> MasterWidget site
+displayPostPreviewsAsAuthor = displayPostPreviews' [whamlet|
+        You do not have any posts. <a href="@{toMasterRoute PKCloudBlogNewR}">Create one</a>!
+    |]
+
+displayPostPreviews' :: forall site post tag . (PKCloudBlog site post tag, ToMasterRoute PKCloudBlogApp site) => MasterWidget site -> [Entity post] -> Int64 -> Int64 -> Route PKCloudBlogApp -> (Int64 -> Route PKCloudBlogApp) -> MasterWidget site
+displayPostPreviews' emptyMessage posts page postsPerPage route routePage = 
         case posts of
             [] -> 
                 if page == 1 then
-                    [whamlet|
-                        There are no posts yet. Check back later!
-                    |]
+                    emptyMessage
                 else
                     notFound
             _ -> do

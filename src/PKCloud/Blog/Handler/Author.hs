@@ -34,10 +34,11 @@ getPostsHelper page author = do
                 pkcloudSetTitle $ toHtml title
 
                 -- Make columns.
-                sidebar <- sidebarW uId
+                isAuthor <- isAuthorW uId
+                let sidebar = sidebarM isAuthor
                 let cols = makeColumns sidebar $
                       -- Display previews.
-                      displayPostPreviews posts page postsPerPage (PKCloudBlogAuthorR author) (PKCloudBlogAuthorPageR author)
+                      displayPreviews isAuthor posts page postsPerPage (PKCloudBlogAuthorR author) (PKCloudBlogAuthorPageR author)
 
                 [whamlet|
                     <div .container>
@@ -45,22 +46,26 @@ getPostsHelper page author = do
                             ^{cols}
                 |]
     where
+        -- If current user is the author, show the previews as the author.
+        displayPreviews True = displayPostPreviewsAsAuthor
+        displayPreviews False = displayPostPreviews
+
         postsPerPage :: Int64
         postsPerPage = 10
         qLimit = postsPerPage + 1
         qOffset = (page - 1) * postsPerPage
 
-        sidebarW authorId = do
-            -- If current user is the author, show the new post button.
+        isAuthorW authorId = do
             userIdM <- handlerToWidget maybeAuthId
-            if userIdM == Just authorId then
-                return $ Just [whamlet|
-                    <div>
-                        <a .btn .btn-default .btn-lg .btn-block href="@{toMasterRoute PKCloudBlogNewR}">
-                            New post
-                |]
-            else
-                return Nothing
+            return $ userIdM == Just authorId
+
+        -- If current user is the author, show the new post button.
+        sidebarM True = Just [whamlet|
+                <div>
+                    <a .btn .btn-default .btn-lg .btn-block href="@{toMasterRoute PKCloudBlogNewR}">
+                        New post
+            |]
+        sidebarM False = Nothing
 
 
 getPKCloudBlogAuthorR :: forall site post tag . Text -> Handler site post tag Html

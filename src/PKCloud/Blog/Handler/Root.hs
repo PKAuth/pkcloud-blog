@@ -58,7 +58,7 @@ getPKCloudBlogRootR = do -- redirect PKCloudBlogPostsR
                 <h2 .blog-h2>
                     <a href="@{toMasterRoute $ PKCloudBlogAuthorR authorIdent}">
                         Your Posts
-                ^{displayPostPreviews posts 1 dLimit (PKCloudBlogAuthorR authorIdent) (PKCloudBlogAuthorPageR authorIdent)}
+                ^{displayPostPreviewsAsAuthor posts 1 dLimit (PKCloudBlogAuthorR authorIdent) (PKCloudBlogAuthorPageR authorIdent)}
             |]
 
         recentPostsW :: (SqlExpr (Entity post) -> SqlExpr (E.Value Bool)) -> WidgetT site IO ()
