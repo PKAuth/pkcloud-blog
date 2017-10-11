@@ -56,6 +56,7 @@ generateHTML year month day post (formW, formEnc) editM = lift $ pkcloudDefaultL
                     <button .btn .btn-danger .btn-lg .btn-block data-toggle="modal" data-target="##{deleteModalId}">
                         Delete
                     ^{postLinkW}
+                    ^{clearEditsW}
         <div .modal .fade tabindex="-1" role="dialog" id="#{deleteModalId}">
             <div .modal-dialog ##{deleteModalId}-dialog>
                 <div .modal-content>
@@ -69,6 +70,7 @@ generateHTML year month day post (formW, formEnc) editM = lift $ pkcloudDefaultL
                                 ^{deleteW}
                                 <button type="submit" .btn .btn-danger>
                                     Delete
+                            ^{clearEditsW}
     |]
 
     where
@@ -79,6 +81,26 @@ generateHTML year month day post (formW, formEnc) editM = lift $ pkcloudDefaultL
                     Preview
                         ^{pkBlogRenderBlog post tags}
             |]
+
+        clearEditsW = case editM of
+            Nothing -> return mempty
+            Just _ -> do
+                (clearW, clearE) <- handlerToWidget $ generateFormPost renderClearEditsForm
+
+                -- JP: Why do we need to add this margin manually?
+                clearId <- newIdent
+                toWidget [lucius|
+                    ##{clearId} {
+                        margin-top: 5px;
+                    }
+                |]
+
+                [whamlet|
+                    <form role=form method=post action="@{toMasterRoute $ PKCloudBlogClearEditsR year month day $ pkPostLink post}" enctype=#{clearE}>
+                        ^{clearW}
+                        <button type="submit" ##{clearId} .btn .btn-default .btn-lg .btn-block>
+                            Clear edits
+                |]
 
 data FormData = FormData {
       _formDataTitle :: PostTitle
@@ -113,6 +135,9 @@ renderEditForm post tags oldTags = renderBootstrap3 BootstrapBasicForm $ FormDat
 renderDeleteForm :: SiteForm site ()
 renderDeleteForm = renderDivs $ pure ()
 
+renderClearEditsForm :: SiteForm site ()
+renderClearEditsForm = renderDivs $ pure ()
+
 generateEditForm :: forall site post tag . Either (Entity post) (post, [Text]) -> Handler site post tag (SiteForm site FormData)
 
 -- Default to pending edits.
@@ -132,6 +157,31 @@ getPendingEdits :: forall site post tag . Key post -> Handler site post tag (May
 getPendingEdits postId = 
     (Aeson.decodeStrict =<<) `fmap` lookupSessionBS ( pkcloudBlogPreviewEditKey postId)
 
+postPKCloudBlogClearEditsR :: forall site post tag . PostYear -> PostMonth -> PostDay -> PostLink -> Handler site post tag Html
+postPKCloudBlogClearEditsR year month day slug = do
+    _ <- requireBlogUserId
+
+    -- Lookup post.
+    postM :: Maybe (Entity post) <- lift $ runDB $ getBy $ pkPostUniqueLink year month day slug
+    case postM of
+        Nothing ->
+            lift notFound
+        Just (Entity postId post) -> do
+            -- Check if user can edit.
+            hasPermission <- lift $ pkcloudCanWrite post
+            when (not hasPermission) $ 
+                lift $ permissionDenied "You do not have permission to edit this post."
+
+            -- Delete session edits.
+            deleteSession $ pkcloudBlogPreviewEditKey postId
+
+            -- Set message.
+            lift $ pkcloudSetMessageSuccess "Cleared edits."
+
+            -- Redirect.
+            redirect $ PKCloudBlogEditR year month day slug
+
+
 getPKCloudBlogEditR :: forall site post tag . PostYear -> PostMonth -> PostDay -> PostLink -> Handler site post tag Html
 getPKCloudBlogEditR year month day slug = do
     _ <- requireBlogUserId
@@ -150,10 +200,6 @@ getPKCloudBlogEditR year month day slug = do
             -- Check if there are edits in the session.
             editM <- getPendingEdits postId
 
-            -- Pass current edits to generateEditForm.
-            -- Display "Clear edits" button on sidebar.
-            -- Display preview.
-            
             -- Generate form.
             let postD = maybe (Left postE) Right editM
             form <- generateEditForm postD >>= lift . generateFormPost 
