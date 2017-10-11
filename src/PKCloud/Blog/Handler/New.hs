@@ -32,7 +32,7 @@ generateHTML (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp "New 
                         <div .clearfix>
     |]
 
-renderNewForm :: [Text] -> MasterForm FormData
+renderNewForm :: forall site post tag . (PKCloudBlog site post tag, RenderMessage site FormMessage) => [Text] -> SiteForm site FormData
 renderNewForm tags markup = do
     titleId <- newFormIdent
     slugId <- newFormIdent

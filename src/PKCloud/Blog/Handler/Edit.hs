@@ -77,7 +77,7 @@ data FormData = FormData {
     , _formDataPublished :: PostPublished
     }
 
-renderEditForm :: forall site post tag . (PKCloudBlog site post tag) => post -> [Text] -> [Text] -> MasterForm FormData
+renderEditForm :: forall site post tag . (PKCloudBlog site post tag) => post -> [Text] -> [Text] -> SiteForm site FormData
 renderEditForm post tags oldTags = renderBootstrap3 BootstrapBasicForm $ FormData
     <$> areq textField titleSettings ( Just $ pkPostTitle post)
     <*> areq textareaField contentSettings ( Just $ Textarea $ pkPostContent post)
@@ -100,10 +100,10 @@ renderEditForm post tags oldTags = renderBootstrap3 BootstrapBasicForm $ FormDat
             let oldS = fsAttrs setting in
             setting {fsAttrs = a:oldS}
 
-renderDeleteForm :: MasterForm ()
+renderDeleteForm :: SiteForm site ()
 renderDeleteForm = renderDivs $ pure ()
 
-renderEditHelper :: forall site post tag . Entity post -> Handler site post tag (MasterForm FormData)
+renderEditHelper :: forall site post tag . Entity post -> Handler site post tag (SiteForm site FormData)
 renderEditHelper (Entity postId post) = do
     tags <- lift $ getAutocompleteTags
     oldTags <- fmap (fmap unValue) $ lift $ runDB $ select $ from $ \tag -> do
@@ -190,9 +190,6 @@ postPKCloudBlogEditR year month day slug = do
             when (not hasPermission) $ 
                 lift $ permissionDenied "You do not have permission to edit this post."
 
-            -- Check if preview was pressed or update.
-            isPreview <- (== Just "preview") `fmap` lookupPostParam "submit"
-            
             -- Parse form.
             ((result, formW), formE) <- renderEditHelper postE >>= lift . runFormPost
             case result of
@@ -215,6 +212,7 @@ postPKCloudBlogEditR year month day slug = do
                     let tags = maybe [] id tagsM
 
                     -- Check if preview was pressed or update.
+                    isPreview <- (== Just "preview") `fmap` lookupPostParam "submit"
                     if isPreview then
                         previewPost postId newPost tags
                     else
@@ -224,7 +222,7 @@ postPKCloudBlogEditR year month day slug = do
         previewPost postId post tags = do
             -- Save data into cookie.
             setSessionBS (pkcloudBlogPreviewEditKey postId) $ BSL.toStrict $ Aeson.encode (post, tags)
-            redirect $ PKCloudBlogEditPreviewR year month day slug
+            redirect $ PKCloudBlogEditR year month day slug
 
         updatePost postId newPost tags = do
             lift $ runDB $ do

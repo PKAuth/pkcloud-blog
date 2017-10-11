@@ -5,7 +5,7 @@ module Import (
     , Handler
 --     , Widget
     , MasterWidget
-    , MasterForm
+    , SiteForm
     , maybeBlogUserId
     , requireBlogUserId
     , makeBlogPreview
@@ -32,7 +32,8 @@ import PKCloud.Blog.Core as Export
 -- TODO: Move to PKCloud.Import?
 import Text.Blaze (Markup)
 -- | Type for forms in master site.
-type MasterForm a = forall site post tag . (PKCloudBlog site post tag, RenderMessage site FormMessage) => Markup -> MForm (HandlerT site IO) (FormResult a, WidgetT site IO ())
+type SiteForm site a = Markup -> MForm (HandlerT site IO) (FormResult a, WidgetT site IO ())
+-- type MasterForm site a = forall post tag . (PKCloudBlog site post tag, RenderMessage site FormMessage) => Markup -> MForm (HandlerT site IO) (FormResult a, WidgetT site IO ())
 
 
 
