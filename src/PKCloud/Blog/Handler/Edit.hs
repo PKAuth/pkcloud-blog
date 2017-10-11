@@ -5,8 +5,8 @@ import qualified Data.ByteString.Lazy as BSL
 
 import Import
 
-generateHTML :: forall site post tag . PostYear -> PostMonth -> PostDay -> post -> (MasterWidget site, Enctype) -> Handler site post tag Html
-generateHTML year month day post (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp "Edit post" $ do
+generateHTML :: forall site post tag . PostYear -> PostMonth -> PostDay -> post -> (MasterWidget site, Enctype) -> Maybe (post, [Text]) -> Handler site post tag Html
+generateHTML year month day post (formW, formEnc) editM = lift $ pkcloudDefaultLayout PKCloudBlogApp "Edit post" $ do
     pkcloudSetTitle "Edit post"
 
     -- Make delete form.
@@ -51,6 +51,7 @@ generateHTML year month day post (formW, formEnc) = lift $ pkcloudDefaultLayout 
                             <button type="submit" name="submit" value="update" .btn .btn-primary>
                                 Update
                         <div .clearfix>
+                    ^{previewW}
                 <div .col-sm-4>
                     <button .btn .btn-danger .btn-lg .btn-block data-toggle="modal" data-target="##{deleteModalId}">
                         Delete
@@ -69,6 +70,15 @@ generateHTML year month day post (formW, formEnc) = lift $ pkcloudDefaultLayout 
                                 <button type="submit" .btn .btn-danger>
                                     Delete
     |]
+
+    where
+        previewW = case editM of
+            Nothing -> mempty
+            Just (post, tags) -> [whamlet|
+                <h1>
+                    Preview
+                        ^{pkBlogRenderBlog post tags}
+            |]
 
 data FormData = FormData {
       _formDataTitle :: PostTitle
@@ -103,13 +113,24 @@ renderEditForm post tags oldTags = renderBootstrap3 BootstrapBasicForm $ FormDat
 renderDeleteForm :: SiteForm site ()
 renderDeleteForm = renderDivs $ pure ()
 
-renderEditHelper :: forall site post tag . Entity post -> Handler site post tag (SiteForm site FormData)
-renderEditHelper (Entity postId post) = do
-    tags <- lift $ getAutocompleteTags
+generateEditForm :: forall site post tag . Either (Entity post) (post, [Text]) -> Handler site post tag (SiteForm site FormData)
+
+-- Default to pending edits.
+generateEditForm (Right (post, tags)) = do
+    autoTags <- lift getAutocompleteTags
+    return $ renderEditForm post autoTags tags
+
+-- Otherwise, default to existing post.
+generateEditForm (Left (Entity postId post)) = do
+    autoTags <- lift getAutocompleteTags
     oldTags <- fmap (fmap unValue) $ lift $ runDB $ select $ from $ \tag -> do
         where_ (tag ^. pkPostTagPostField ==. val postId)
         return (tag ^. pkPostTagTagField)
-    return $ renderEditForm post tags oldTags
+    return $ renderEditForm post autoTags oldTags
+
+getPendingEdits :: forall site post tag . Key post -> Handler site post tag (Maybe (post, [Text]))
+getPendingEdits postId = 
+    (Aeson.decodeStrict =<<) `fmap` lookupSessionBS ( pkcloudBlogPreviewEditKey postId)
 
 getPKCloudBlogEditR :: forall site post tag . PostYear -> PostMonth -> PostDay -> PostLink -> Handler site post tag Html
 getPKCloudBlogEditR year month day slug = do
@@ -120,61 +141,26 @@ getPKCloudBlogEditR year month day slug = do
     case postM of
         Nothing ->
             lift notFound
-        Just postE@(Entity _ post) -> do
+        Just postE@(Entity postId post) -> do
             -- Check if user can edit.
             hasPermission <- lift $ pkcloudCanWrite post
             when (not hasPermission) $ 
                 lift $ permissionDenied "You do not have permission to edit this post."
 
-            -- TODO: Check if there are edits in the session. XXX
-            -- Pass current edits to renderEditHelper.
+            -- Check if there are edits in the session.
+            editM <- getPendingEdits postId
+
+            -- Pass current edits to generateEditForm.
             -- Display "Clear edits" button on sidebar.
             -- Display preview.
             
             -- Generate form.
-            form <- renderEditHelper postE >>= lift . generateFormPost 
+            let postD = maybe (Left postE) Right editM
+            form <- generateEditForm postD >>= lift . generateFormPost 
 
             -- Generate HTML.
-            generateHTML year month day post form
+            generateHTML year month day post form editM
 
-getPKCloudBlogEditPreviewR :: forall site post tag . PostYear -> PostMonth -> PostDay -> PostLink -> Handler site post tag Html
-getPKCloudBlogEditPreviewR year month day slug = do
-    _ <- requireBlogUserId
-
-    -- Lookup post.
-    postM :: Maybe (Entity post) <- lift $ runDB $ getBy $ pkPostUniqueLink year month day slug
-    case postM of
-        Nothing ->
-            lift notFound
-        Just (Entity postId oldPost) -> do
-            -- Check if user can edit.
-            hasPermission <- lift $ pkcloudCanWrite oldPost
-            when (not hasPermission) $ 
-                lift $ permissionDenied "You do not have permission to edit this post."
-
-            -- Load preview.
-            aesonByteStringM <- lookupSessionBS $ pkcloudBlogPreviewEditKey postId
-            case Aeson.decodeStrict =<< aesonByteStringM of
-                Nothing -> do
-                    lift $ pkcloudSetMessageWarning "Preview not found."
-                    redirect $ PKCloudBlogEditR year month day slug
-                Just ((post :: post), tags) -> do
-            
-            
-            
-                    -- TODO: Generate form. XXX
-
-                    -- Display preview.
-                    lift $ pkcloudDefaultLayout PKCloudBlogApp "Preview Post" $ do
-                        pkcloudSetTitle "Preview Post"
-                        [whamlet|
-                            <div .container>
-                                <div .row>
-                                    <div .col-sm-8>
-                                        ^{pkBlogRenderBlog post tags}
-                        |] 
-
-            
 postPKCloudBlogEditR :: forall site post tag . PostYear -> PostMonth -> PostDay -> PostLink -> Handler site post tag Html
 postPKCloudBlogEditR year month day slug = do
     _ <- requireBlogUserId
@@ -190,15 +176,19 @@ postPKCloudBlogEditR year month day slug = do
             when (not hasPermission) $ 
                 lift $ permissionDenied "You do not have permission to edit this post."
 
+            -- Check if there are edits in the session.
+            editM <- getPendingEdits postId
+
             -- Parse form.
-            ((result, formW), formE) <- renderEditHelper postE >>= lift . runFormPost
+            let postD = maybe (Left postE) Right editM
+            ((result, formW), formE) <- generateEditForm postD >>= lift . runFormPost
             case result of
                 FormMissing -> do
                     lift $ pkcloudSetMessageDanger "Editing post failed."
-                    generateHTML year month day post (formW, formE)
+                    generateHTML year month day post (formW, formE) editM
                 FormFailure _msg -> do
                     lift $ pkcloudSetMessageDanger "Editing post failed."
-                    generateHTML year month day post (formW, formE)
+                    generateHTML year month day post (formW, formE) editM
                 FormSuccess (FormData title content' tagsM published) -> do
                     -- Update post.
                     let content = unTextarea content'
