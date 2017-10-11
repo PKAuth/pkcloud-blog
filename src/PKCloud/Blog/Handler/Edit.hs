@@ -103,13 +103,13 @@ renderEditForm post tags oldTags = renderBootstrap3 BootstrapBasicForm $ FormDat
 renderDeleteForm :: MasterForm ()
 renderDeleteForm = renderDivs $ pure ()
 
-renderEditHelper :: forall site post tag . Key post -> Handler site post tag ([Text], [Text])
-renderEditHelper postId = do
+renderEditHelper :: forall site post tag . Entity post -> Handler site post tag (MasterForm FormData)
+renderEditHelper (Entity postId post) = do
     tags <- lift $ getAutocompleteTags
     oldTags <- fmap (fmap unValue) $ lift $ runDB $ select $ from $ \tag -> do
         where_ (tag ^. pkPostTagPostField ==. val postId)
         return (tag ^. pkPostTagTagField)
-    return (tags, oldTags)
+    return $ renderEditForm post tags oldTags
 
 getPKCloudBlogEditR :: forall site post tag . PostYear -> PostMonth -> PostDay -> PostLink -> Handler site post tag Html
 getPKCloudBlogEditR year month day slug = do
@@ -120,15 +120,19 @@ getPKCloudBlogEditR year month day slug = do
     case postM of
         Nothing ->
             lift notFound
-        Just (Entity postId post) -> do
+        Just postE@(Entity _ post) -> do
             -- Check if user can edit.
             hasPermission <- lift $ pkcloudCanWrite post
             when (not hasPermission) $ 
                 lift $ permissionDenied "You do not have permission to edit this post."
+
+            -- TODO: Check if there are edits in the session. XXX
+            -- Pass current edits to renderEditHelper.
+            -- Display "Clear edits" button on sidebar.
+            -- Display preview.
             
             -- Generate form.
-            (autoTags, oldTags) <- renderEditHelper postId
-            form <- lift $ generateFormPost $ renderEditForm post autoTags oldTags
+            form <- renderEditHelper postE >>= lift . generateFormPost 
 
             -- Generate HTML.
             generateHTML year month day post form
@@ -180,7 +184,7 @@ postPKCloudBlogEditR year month day slug = do
     case postM of
         Nothing ->
             lift notFound
-        Just (Entity postId post) -> do
+        Just postE@(Entity postId post) -> do
             -- Check if user can edit.
             hasPermission <- lift $ pkcloudCanWrite post
             when (not hasPermission) $ 
@@ -190,8 +194,7 @@ postPKCloudBlogEditR year month day slug = do
             isPreview <- (== Just "preview") `fmap` lookupPostParam "submit"
             
             -- Parse form.
-            (autoTags, oldTags) <- renderEditHelper postId
-            ((result, formW), formE) <- lift $ runFormPost $ renderEditForm post autoTags oldTags
+            ((result, formW), formE) <- renderEditHelper postE >>= lift . runFormPost
             case result of
                 FormMissing -> do
                     lift $ pkcloudSetMessageDanger "Editing post failed."
