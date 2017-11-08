@@ -15,8 +15,8 @@ data FormData = FormData {
     , _formDataPublished :: PostPublished
     }
 
-generateHTML :: forall site post tag . (MasterWidget site, Enctype) -> Handler site post tag Html
-generateHTML (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp "New post" $ do
+generateHTML :: forall site post tag . (MasterWidget site, Enctype) -> Maybe (post, [Text]) -> Handler site post tag Html
+generateHTML (formW, formEnc) previewM = lift $ pkcloudDefaultLayout PKCloudBlogApp "New post" $ do
     pkcloudSetTitle "New post"
     [whamlet|
         <div .container>
@@ -30,19 +30,29 @@ generateHTML (formW, formEnc) = lift $ pkcloudDefaultLayout PKCloudBlogApp "New 
                             <button type="submit" name="submit" value="create" .btn .btn-primary>
                                 Create
                         <div .clearfix>
+                    ^{previewW}
     |]
 
-renderNewForm :: forall site post tag . (PKCloudBlog site post tag, RenderMessage site FormMessage) => [Text] -> SiteForm site FormData
-renderNewForm tags markup = do
+    where
+        previewW = case previewM of
+            Nothing -> mempty
+            Just (post, tags) -> [whamlet|
+                <h1>
+                    Preview
+                        ^{pkBlogRenderBlog post tags}
+            |]
+
+renderNewForm :: forall site post tag . (PKCloudBlog site post tag, RenderMessage site FormMessage) => [Text] -> Maybe (post, [Text]) -> SiteForm site FormData
+renderNewForm tags previewM markup = do
     titleId <- newFormIdent
     slugId <- newFormIdent
     datePieces <- splitDate <$> getCurrentTime
     (res, widget') <- renderBootstrap3 BootstrapBasicForm (FormData
-        <$> areq textField (withId titleId titleSettings) Nothing
+        <$> areq textField (withId titleId titleSettings) defaultTitle 
         <*> areq (checkM (checkSlug datePieces) textField) (withId slugId slugSettings) Nothing
-        <*> areq textareaField contentSettings Nothing
-        <*> aopt (tagField tags) tagSettings Nothing
-        <*> areq (bootstrapCheckBoxField ("Publish" :: Text)) publishSettings (Just True)
+        <*> areq textareaField contentSettings defaultContent
+        <*> aopt (tagField tags) tagSettings defaultTags
+        <*> areq (bootstrapCheckBoxField ("Publish" :: Text)) publishSettings defaultPublish
 --        <*  bootstrapSubmit ("Submit" :: BootstrapSubmit Text)
       ) markup
     let widget = do
@@ -50,19 +60,24 @@ renderNewForm tags markup = do
                 (function() {
                     // Derive slug from title.
                     var cachedValue = null;
-                    $(#{identToJavascript titleId}).on('change keydown paste input mouseup', function() {
+                    var updateSlug = function() {
                         var value = $(this).val()
                         if (value != cachedValue) {
                             cachedValue = value;
                             $(#{identToJavascript slugId}).val( getSlug( value));
                         }
-                    });
+                    };
+                    $(#{identToJavascript titleId}).on('change keydown paste input mouseup', updateSlug);
+                    updateSlug(); // TODO FIXME XXX
                 })();
             |]
             widget'
     return (res, widget)
 
     where
+        (defaultTitle, defaultContent, defaultTags, defaultPublish) = case previewM of
+            Nothing -> (Nothing, Nothing, Nothing, Just True)
+            Just (post, tags) -> (Just (pkPostTitle post), Just (Textarea $ pkPostContent post), Just (Just tags), Just (pkPostPublished post) )
         tagSettings = withPlaceholder "Tags" $
             bfs ("Tags" :: Text)
 
@@ -100,32 +115,38 @@ renderNewForm tags markup = do
         readonly setting = 
             let attrs = fsAttrs setting in
             setting {fsAttrs = ("readonly","readonly"):attrs}
-
+getPendingPreview :: forall site post tag . Handler site post tag (Maybe (post, [Text]) ) 
+getPendingPreview = do
+    -- Get session information for Preview 
+    aesonByteStringM <- lookupSessionBS pkcloudBlogPreviewNewKey
+    return $ Aeson.decodeStrict =<< aesonByteStringM
+ 
 getPKCloudBlogNewR :: Handler site post tag Html
 getPKCloudBlogNewR = do
     -- Check if user can create posts.
     _ <- requireBlogUserId
 
+    previewM <- getPendingPreview
     -- Generate form widget.
     tags <- lift getAutocompleteTags
-    form <- lift $ generateFormPost $ renderNewForm tags
-    
+    form <- lift $ generateFormPost $ renderNewForm tags previewM
     -- Generate html.
-    generateHTML form
+    generateHTML form previewM 
 
 postPKCloudBlogNewR :: forall site post tag . Handler site post tag Html
 postPKCloudBlogNewR = do
     userId <- requireBlogUserId
     -- Parse POST.
+    previewM <- getPendingPreview
     tags <- lift getAutocompleteTags
-    ((result, formW), formE) <- lift $ runFormPost $ renderNewForm tags
+    ((result, formW), formE) <- lift $ runFormPost $ renderNewForm tags previewM
     case result of
         FormMissing -> do
             lift $ pkcloudSetMessageDanger "Creating post failed."
-            generateHTML (formW, formE)
+            generateHTML (formW, formE) previewM
         FormFailure _msg -> do
             lift $ pkcloudSetMessageDanger "Creating post failed."
-            generateHTML (formW, formE)
+            generateHTML (formW, formE) previewM
         FormSuccess (FormData title slug content' tagsM published) -> do
 
             -- Create post.
@@ -147,16 +168,16 @@ postPKCloudBlogNewR = do
                 Just "preview" -> do
                     previewPost post tags 
                 _ -> do 
-                    createPost formW formE tags post slug year month day
+                    createPost formW formE tags post slug year month day previewM
     where
-        createPost formW formE tags post slug year month day = do
+        createPost formW formE tags post slug year month day previewM = do
             -- Insert post.
             postM <- lift $ runDB $ insertUnique post
             case postM of
                 Nothing -> do
                     -- Set message.
                     lift $ pkcloudSetMessageDanger "Another post already exists with the same permalink."
-                    generateHTML (formW, formE)
+                    generateHTML (formW, formE) previewM
                 Just postId -> do
                     -- Insert tags.
                     lift $ runDB $ mapM_ (insert_ . pkPostTag postId) tags
@@ -174,11 +195,13 @@ postPKCloudBlogNewR = do
            -- Save post data into cookie
            -- Aeson Encode the post and tags
             setSessionBS pkcloudBlogPreviewNewKey $ BSL.toStrict $ Aeson.encode (post, tags)
-            redirect $ PKCloudBlogPreviewR 
+            redirect $ PKCloudBlogNewR 
 
 pkcloudBlogPreviewNewKey :: Text
 pkcloudBlogPreviewNewKey = "pkcloud-blog-preview-new"
 
+
+-- TODO DELETEME XXX
 getPKCloudBlogPreviewR :: forall site post tag . Handler site post tag Html 
 getPKCloudBlogPreviewR = do
     -- TODO: Authenticate that the user can create posts (pkcloudCanCreate). XXX
