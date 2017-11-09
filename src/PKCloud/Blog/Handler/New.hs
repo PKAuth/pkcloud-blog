@@ -1,4 +1,4 @@
-module PKCloud.Blog.Handler.New (getPKCloudBlogNewR, postPKCloudBlogNewR, getPKCloudBlogPreviewR) where
+module PKCloud.Blog.Handler.New (getPKCloudBlogNewR, postPKCloudBlogNewR) where
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as BSL
@@ -115,7 +115,8 @@ renderNewForm tags previewM markup = do
         readonly setting = 
             let attrs = fsAttrs setting in
             setting {fsAttrs = ("readonly","readonly"):attrs}
-getPendingPreview :: forall site post tag . Handler site post tag (Maybe (post, [Text]) ) 
+
+getPendingPreview :: forall site post tag . Handler site post tag (Maybe (post, [Text]))
 getPendingPreview = do
     -- Get session information for Preview 
     aesonByteStringM <- lookupSessionBS pkcloudBlogPreviewNewKey
@@ -126,18 +127,24 @@ getPKCloudBlogNewR = do
     -- Check if user can create posts.
     _ <- requireBlogUserId
 
+    -- Get pending preview.
     previewM <- getPendingPreview
+
     -- Generate form widget.
     tags <- lift getAutocompleteTags
     form <- lift $ generateFormPost $ renderNewForm tags previewM
+
     -- Generate html.
     generateHTML form previewM 
 
 postPKCloudBlogNewR :: forall site post tag . Handler site post tag Html
 postPKCloudBlogNewR = do
     userId <- requireBlogUserId
-    -- Parse POST.
+
+    -- Get pending preview.
     previewM <- getPendingPreview
+
+    -- Parse POST.
     tags <- lift getAutocompleteTags
     ((result, formW), formE) <- lift $ runFormPost $ renderNewForm tags previewM
     case result of
@@ -200,21 +207,3 @@ postPKCloudBlogNewR = do
 pkcloudBlogPreviewNewKey :: Text
 pkcloudBlogPreviewNewKey = "pkcloud-blog-preview-new"
 
-
--- TODO DELETEME XXX
-getPKCloudBlogPreviewR :: forall site post tag . Handler site post tag Html 
-getPKCloudBlogPreviewR = do
-    -- TODO: Authenticate that the user can create posts (pkcloudCanCreate). XXX
-
-    aesonByteStringM <- lookupSessionBS pkcloudBlogPreviewNewKey
-    case Aeson.decodeStrict =<< aesonByteStringM of 
-        Nothing -> do 
-            lift $ pkcloudSetMessageWarning "Post not found."
-            redirect $ PKCloudBlogNewR
-        Just ((post :: post), tags) -> do
-            --display post
-            lift $ pkcloudDefaultLayout PKCloudBlogApp "Preview Post" $ do
-                pkcloudSetTitle "Preview Post"
-                [whamlet|
-                    ^{pkBlogRenderBlog post tags}
-                |] 
