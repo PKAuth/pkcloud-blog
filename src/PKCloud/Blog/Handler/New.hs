@@ -68,7 +68,7 @@ renderNewForm tags previewM markup = do
                         }
                     };
                     $(#{identToJavascript titleId}).on('change keydown paste input mouseup', updateSlug);
-                    updateSlug(); // TODO FIXME XXX
+                    updateSlug.call( $(#{identToJavascript titleId}));
                 })();
             |]
             widget'
