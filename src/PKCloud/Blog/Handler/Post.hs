@@ -2,8 +2,8 @@ module PKCloud.Blog.Handler.Post where
 
 import Import
 
-getPKCloudBlogPostR :: forall site post tag . PostYear -> PostMonth -> PostDay -> Text -> Handler site post tag Html
-getPKCloudBlogPostR year month day slug = lift $ do
+getPKCloudBlogPostR :: forall site post tag . PostYear -> PostMonth2 -> PostDay2 -> Text -> Handler site post tag Html
+getPKCloudBlogPostR year (Int2 month) (Int2 day) slug = lift $ do
     -- Get post.
     (Entity postId post) :: (Entity post) <- runDB $ getBy404 $ pkPostUniqueLink year month day slug
 
@@ -13,7 +13,7 @@ getPKCloudBlogPostR year month day slug = lift $ do
         -- Redirect to edit if use is author.
         canEdit <- pkcloudCanWrite post
         if canEdit then
-            let route = toMasterRoute $ PKCloudBlogEditR year month day slug :: Route site in
+            let route = toMasterRoute $ PKCloudBlogEditR year (Int2 month) (Int2 day) slug :: Route site in
             redirect route
         else
             notFound
@@ -44,7 +44,7 @@ getPKCloudBlogPostR year month day slug = lift $ do
             else
                 return $ Just [whamlet|
                     <div>
-                        <a .btn .btn-default .btn-lg .btn-block href="@{toMasterRoute $ PKCloudBlogEditR year month day $ pkPostLink post}">
+                        <a .btn .btn-default .btn-lg .btn-block href="@{toMasterRoute $ PKCloudBlogEditR year (Int2 month) (Int2 day) $ pkPostLink post}">
                             Edit post
                 |]
 
