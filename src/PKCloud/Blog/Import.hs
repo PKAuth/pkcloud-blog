@@ -22,7 +22,7 @@ newtype Int2 = Int2 Int
 
 instance PathPiece Int2 where
     fromPathPiece t = Int2 <$> fromPathPiece t
-    toPathPiece (Int2 i) = Text.pack $ show i
+    toPathPiece i = Text.pack $ show i
 
 instance Read Int2 where
     readsPrec i a = (\(a, b) -> (Int2 a, b)) <$> readsPrec i a
