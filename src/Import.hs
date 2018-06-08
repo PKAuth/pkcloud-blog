@@ -26,6 +26,7 @@ import Database.Esqueleto (Value)
 import qualified Data.List as List
 import qualified Data.Text as Text
 import PKCloud.Import as Export
+import Yesod.Persist.Core as Export (getBy404)
 
 import PKCloud.Blog.Core as Export
 
