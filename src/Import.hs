@@ -46,6 +46,21 @@ type Handler master post tag a = (ToMasterRoute PKCloudBlogApp master, PKCloudBl
 -- type MasterWidget master = forall post edit . (PKCloudBlog master post edit) => WidgetT master IO ()
 type MasterWidget master = WidgetT master IO ()
 
+-- Check if the user id has blog enabled/can create posts.
+isBlogUser :: forall site post tag . AuthId site -> Handler site post tag Bool
+isBlogUser userId = do
+    app <- getYesod
+    appEnabled <- lift $ pkcloudAppEnabled app userId
+    if appEnabled then do
+        -- Make a test post to see if the user can create posts.
+        now <- getCurrentTime
+        let (year, month, day) = splitDate now
+        let testPost :: post = pkPost userId "test" now True "Test" "content" "content" Nothing year month day
+
+        lift $ pkcloudCanCreate testPost
+    else
+        return False
+
 maybeBlogUserId :: forall site post tag . Handler site post tag (Maybe (AuthId site))
 maybeBlogUserId = do
     userM <- lift maybeAuthId
@@ -53,9 +68,8 @@ maybeBlogUserId = do
         Nothing ->
             return Nothing
         Just userId -> do
-            app <- getYesod
-            appEnabled <- lift $ pkcloudAppEnabled app userId
-            if appEnabled then
+            auth <- isBlogUser userId
+            if auth then
                 return $ Just userId
             else
                 return Nothing
@@ -64,9 +78,8 @@ requireBlogUserId :: forall site post tag . Handler site post tag (AuthId site)
 requireBlogUserId = do
     userId :: AuthId site <- lift requireAuthId
 
-    app <- getYesod
-    appEnabled <- lift $ pkcloudAppEnabled app userId
-    when (not appEnabled) $
+    auth <- isBlogUser userId
+    when (not auth) $
         permissionDenied "You do not have permission to create blog posts. Try enabling the PKCloud blog app."
 
     return userId
