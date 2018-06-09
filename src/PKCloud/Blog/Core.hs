@@ -171,7 +171,7 @@ pkBlogDisplayPreview (Entity _ post) = do
             PKCloudBlogPostR
           else
             PKCloudBlogEditR
-    let postRoute = toMasterRoute $ postRouteConst (pkPostYear post) (pkPostMonth post) (pkPostDay post) $ pkPostLink post
+    let postRoute = toMasterRoute $ postRouteConst (pkPostYear post) (Int2 $ pkPostMonth post) (Int2 $ pkPostDay post) $ pkPostLink post
 
     let unpublishedW = when (not $ pkPostPublished post) $ [whamlet|
             <small .unpublished>

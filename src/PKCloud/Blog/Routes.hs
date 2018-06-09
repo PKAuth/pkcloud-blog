@@ -6,15 +6,18 @@ import PKCloud.Blog.Import
 -- import PKCloud.Blog.Core
 data PKCloudBlogApp = PKCloudBlogApp
 
+type PostMonth2 = Int2
+type PostDay2 = Int2
+
 mkYesodSubData "PKCloudBlogApp" [parseRoutes|
 / PKCloudBlogRootR GET
 /posts PKCloudBlogPostsR GET
 /posts/#Int64 PKCloudBlogPostsPageR GET
-/post/#PostYear/#PostMonth/#PostDay/#Text PKCloudBlogPostR GET
+/post/#PostYear/#PostMonth2/#PostDay2/#Text PKCloudBlogPostR GET
 /new PKCloudBlogNewR GET POST
-/clear/#PostYear/#PostMonth/#PostDay/#Text PKCloudBlogClearEditsR POST
-/edit/#PostYear/#PostMonth/#PostDay/#Text PKCloudBlogEditR GET POST
-/delete/#PostYear/#PostMonth/#PostDay/#Text PKCloudBlogDeleteR POST
+/clear/#PostYear/#PostMonth2/#PostDay2/#Text PKCloudBlogClearEditsR POST
+/edit/#PostYear/#PostMonth2/#PostDay2/#Text PKCloudBlogEditR GET POST
+/delete/#PostYear/#PostMonth2/#PostDay2/#Text PKCloudBlogDeleteR POST
 /author/#Text PKCloudBlogAuthorR GET
 /author/#Text/#Int64 PKCloudBlogAuthorPageR GET
 /tag/#Text PKCloudBlogTagR GET

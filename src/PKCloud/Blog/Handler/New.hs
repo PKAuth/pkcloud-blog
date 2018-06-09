@@ -196,7 +196,7 @@ postPKCloudBlogNewR = do
                     lift $ pkcloudSetMessageSuccess "Successfully created post!"
 
                     -- Redirect to post's edit page. 
-                    redirect $ PKCloudBlogEditR year month day slug
+                    redirect $ PKCloudBlogEditR year (Int2 month) (Int2 day) slug
 
         previewPost post tags = do
            -- Save post data into cookie
