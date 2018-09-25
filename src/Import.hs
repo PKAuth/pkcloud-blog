@@ -159,8 +159,9 @@ autocompleteTextField suggestions = Field (parseHelper parser) view UrlEncoded
     where
         view :: FieldViewFunc m [Text]
         view id name attr res req = do
+            let jId = identToJavascript id
             toWidget [julius|
-                $(#{identToJavascript id}).tokenfield({
+                $(#{jId}).tokenfield({
                     autocomplete: {
                         source: #{Aeson.toJSON suggestions},
                         delay: 100
@@ -170,6 +171,9 @@ autocompleteTextField suggestions = Field (parseHelper parser) view UrlEncoded
                     createTokensOnBlur: true
                 });
             |]
+            mapM_ (\(k, v) -> toWidget [julius|
+                $(#{jId}).attr(#{stripTextToJavascript k}, #{stripTextToJavascript v});
+              |]) attr
             let res' = fmap (Text.intercalate ", ") res
             (fieldView (textField :: Field m Text)) id name attr res' req
             
@@ -177,7 +181,10 @@ autocompleteTextField suggestions = Field (parseHelper parser) view UrlEncoded
 
 -- Convert an identity to an Aeson.Value, which can be embeded in javascript. 
 identToJavascript :: Text -> Aeson.Value
-identToJavascript = Aeson.toJSON .("#" <>)
+identToJavascript = Aeson.toJSON . ("#" <>)
+
+stripTextToJavascript :: Text -> Aeson.Value
+stripTextToJavascript = Aeson.toJSON . Text.filter (\c -> Char.isAlphaNum c || c == '-' || c == '_')
 
 generatePostFilters :: Handler site post tag (SqlExpr (Entity post) -> SqlExpr (Value Bool))
 generatePostFilters = do
