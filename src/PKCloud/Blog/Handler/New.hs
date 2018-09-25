@@ -87,8 +87,8 @@ renderNewForm tags previewM markup = do
             postM :: Maybe (Entity post) <- runDB $ getBy $ pkPostUniqueLink year month day slug
             case postM of
                 Nothing ->
-                    -- Checek that slug only is lowercase and dash characters.
-                    if Text.all (\c -> Char.isLower c || c == '-') slug then
+                    -- Check that slug only is lowercase and dash characters.
+                    if Text.all (\c -> Char.isDigit c || Char.isLower c || c == '-') slug then
                         return $ Right slug
                     else
                         return $ Left "Permalinks can only consist of lowercase characters and dashes."
