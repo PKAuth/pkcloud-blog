@@ -170,10 +170,12 @@ autocompleteTextField suggestions = Field (parseHelper parser) view UrlEncoded
                     delimiter: ',',
                     createTokensOnBlur: true
                 });
+                $(#{jtId}).attr("autocapitalize","none");
+                $(#{jtId}).attr("autocorrect","off");
             |]
-            mapM_ (\(k, v) -> toWidget [julius|
-                $(#{jtId}).attr(#{stripTextToJavascript k}, #{stripTextToJavascript v});
-              |]) attr
+            -- mapM_ (\(k, v) -> toWidget [julius|
+            --     $(#{jtId}).attr(#{stripTextToJavascript k}, #{stripTextToJavascript v});
+            --   |]) attr
             let res' = fmap (Text.intercalate ", ") res
             (fieldView (textField :: Field m Text)) id name attr res' req
             
@@ -183,8 +185,8 @@ autocompleteTextField suggestions = Field (parseHelper parser) view UrlEncoded
 identToJavascript :: Text -> Aeson.Value
 identToJavascript = Aeson.toJSON . ("#" <>)
 
-stripTextToJavascript :: Text -> Aeson.Value
-stripTextToJavascript = Aeson.toJSON . Text.filter (\c -> Char.isAlphaNum c || c == '-' || c == '_')
+-- stripTextToJavascript :: Text -> Aeson.Value
+-- stripTextToJavascript = Aeson.toJSON . Text.filter (\c -> Char.isAlphaNum c || c == '-' || c == '_')
 
 generatePostFilters :: Handler site post tag (SqlExpr (Entity post) -> SqlExpr (Value Bool))
 generatePostFilters = do
