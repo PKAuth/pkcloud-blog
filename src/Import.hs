@@ -159,9 +159,9 @@ autocompleteTextField suggestions = Field (parseHelper parser) view UrlEncoded
     where
         view :: FieldViewFunc m [Text]
         view id name attr res req = do
-            let jId = identToJavascript id
+            let jtId = identToJavascript $ id <> "-tokenfield"
             toWidget [julius|
-                $(#{jId}).tokenfield({
+                $(#{identToJavascript id}).tokenfield({
                     autocomplete: {
                         source: #{Aeson.toJSON suggestions},
                         delay: 100
@@ -172,7 +172,7 @@ autocompleteTextField suggestions = Field (parseHelper parser) view UrlEncoded
                 });
             |]
             mapM_ (\(k, v) -> toWidget [julius|
-                $(#{jId}).attr(#{stripTextToJavascript k}, #{stripTextToJavascript v});
+                $(#{jtId}).attr(#{stripTextToJavascript k}, #{stripTextToJavascript v});
               |]) attr
             let res' = fmap (Text.intercalate ", ") res
             (fieldView (textField :: Field m Text)) id name attr res' req
