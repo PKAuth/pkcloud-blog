@@ -125,7 +125,7 @@ renderEditForm post tags oldTags = renderBootstrap3 BootstrapBasicForm $ FormDat
 
         publishSettings = "Publish"
 
-        tagSettings = withPlaceholder "Tags" $
+        tagSettings = withAutocapitalizeNone $ withAutocorrectOff $ withPlaceholder "Tags" $
             bfs ("Tags" :: Text)
 
         withAttr a setting = 

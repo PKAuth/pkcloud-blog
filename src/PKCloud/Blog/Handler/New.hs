@@ -78,7 +78,7 @@ renderNewForm tags previewM markup = do
         (defaultTitle, defaultContent, defaultTags, defaultPublish) = case previewM of
             Nothing -> (Nothing, Nothing, Nothing, Just True)
             Just (post, tags) -> (Just (pkPostTitle post), Just (Textarea $ pkPostContent post), Just (Just tags), Just (pkPostPublished post) )
-        tagSettings = withPlaceholder "Tags" $
+        tagSettings = withAutocapitalizeNone $ withAutocorrectOff $ withPlaceholder "Tags" $
             bfs ("Tags" :: Text)
 
         checkSlug :: forall site post tag . (PKCloudBlog site post tag) => (Int, Int, Int) -> PostLink -> HandlerT site IO (Either Text PostLink)
