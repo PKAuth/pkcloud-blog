@@ -3,7 +3,7 @@ module PKCloud.Blog.Handler.Post where
 import Import
 
 getPKCloudBlogPostR :: forall site post tag . PostYear -> PostMonth2 -> PostDay2 -> Text -> Handler site post tag Html
-getPKCloudBlogPostR year (Int2 month) (Int2 day) slug = lift $ do
+getPKCloudBlogPostR year (Int2 month) (Int2 day) slug = liftHandler $ do
     -- Get post.
     (Entity postId post) :: (Entity post) <- runDB $ getBy404 $ pkPostUniqueLink year month day slug
 

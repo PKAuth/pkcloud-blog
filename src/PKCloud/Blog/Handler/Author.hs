@@ -6,14 +6,14 @@ getPostsHelper :: Int64 -> Text -> Handler site post tag Html
 getPostsHelper page author | page < 1 = getPostsHelper 1 author
 getPostsHelper page author = do
     -- Get author ident.
-    uIdM <- lift $ pkcloudLookupUniqueUsername author
+    uIdM <- liftHandler $ pkcloudLookupUniqueUsername author
     case uIdM of
         Nothing ->
             notFound
         Just uId -> do
             -- Check that the author can make posts.
-            app <- getYesod
-            appEnabled <- lift $ pkcloudAppEnabled app uId
+            app <- getSubYesod
+            appEnabled <- liftHandler $ pkcloudAppEnabled app uId
             when (not appEnabled) $
                 notFound
 
@@ -21,16 +21,16 @@ getPostsHelper page author = do
             queryFilters <- generatePostFilters
 
             -- Get posts.
-            posts <- lift $ runDB $ select $ from $ \p -> do
+            posts <- liftHandler $ runDB $ select $ from $ \p -> do
                 where_ (p ^. pkPostAuthorField ==. val uId &&. queryFilters p)
                 limit qLimit
                 offset qOffset
                 orderBy [desc (p ^. pkPostDateField)]
                 return p
 
-            username <- lift $ pkcloudDisplayName uId
+            username <- liftHandler $ pkcloudDisplayName uId
             let title = "Posts by " <> username
-            lift $ pkcloudDefaultLayout PKCloudBlogApp title $ do
+            liftHandler $ pkcloudDefaultLayout PKCloudBlogApp title $ do
                 pkcloudSetTitle $ toHtml title
 
                 -- Make columns.

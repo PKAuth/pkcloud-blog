@@ -19,7 +19,7 @@ getPostsHelper page = do
     -- Check if we should filter unpublished posts.
     queryFilters <- generatePostFilters
 
-    posts <- lift $ runDB $ select $ from $ \p -> do
+    posts <- liftHandler $ runDB $ select $ from $ \p -> do
         where_ $ queryFilters p
         limit qLimit
         offset qOffset
@@ -28,7 +28,7 @@ getPostsHelper page = do
 
     userM <- maybeBlogUserId
 
-    lift $ pkcloudDefaultLayout PKCloudBlogApp "Blog Posts" $ do
+    liftHandler $ pkcloudDefaultLayout PKCloudBlogApp "Blog Posts" $ do
         pkcloudSetTitle "Posts"
 
         let cols = makeColumns (sidebarW userM) $ displayPostPreviews posts page postsPerPage PKCloudBlogPostsR PKCloudBlogPostsPageR
@@ -44,7 +44,7 @@ getPostsHelper page = do
         qLimit = postsPerPage + 1
         qOffset = (page - 1) * postsPerPage
 
-        sidebarW :: Maybe (AuthId site) -> Maybe (WidgetT site IO ())
+        sidebarW :: Maybe (AuthId site) -> Maybe (WidgetFor site ())
         sidebarW userM = 
             let adminW = case userM of
                     Nothing -> 

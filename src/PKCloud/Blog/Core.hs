@@ -69,7 +69,7 @@ class (SubEntity post, SubEntity tag, PKCloudSecurityPermissions master post, PK
     --  Create -> Preview -> Edit??
     
 -- | Retrieves the n most recent posts.
-pkBlogRetrievePosts :: forall site post tag . (PKCloudBlog site post tag) => Int -> HandlerT site IO [Entity post]
+pkBlogRetrievePosts :: forall site post tag . (PKCloudBlog site post tag) => Int -> HandlerFor site [Entity post]
 pkBlogRetrievePosts n = do
     runDB $ select $ from $ \p -> do
         where_ (p ^. pkPostPublishedField ==. val True)
@@ -101,7 +101,7 @@ pkBlogRenderContent = Markdown.markdown Markdown.def . TextL.fromStrict
 pkBlogRenderDayLong :: UTCTime -> String
 pkBlogRenderDayLong = Time.formatTime Time.defaultTimeLocale "%B %e, %Y"
 
-pkBlogRenderBlog :: forall master post tag . (ToMasterRoute PKCloudBlogApp master, PKCloudBlog master post tag) => post -> [Text] -> WidgetT master IO ()
+pkBlogRenderBlog :: forall master post tag . (ToMasterRoute PKCloudBlogApp master, PKCloudBlog master post tag) => post -> [Text] -> WidgetFor master ()
 pkBlogRenderBlog post tags = do
     let author :: AuthId master = pkPostAuthor post
     authorName <- handlerToWidget $ pkcloudDisplayName author
@@ -163,7 +163,7 @@ instance PKCloudApp PKCloudBlogApp where
     pkcloudAppIdentifier PKCloudBlogApp = "blog"
     pkcloudAppRoot = PKCloudBlogRootR
 
-pkBlogDisplayPreview :: forall site post tag . (PKCloudBlog site post tag, ToMasterRoute PKCloudBlogApp site) => Entity post -> WidgetT site IO ()
+pkBlogDisplayPreview :: forall site post tag . (PKCloudBlog site post tag, ToMasterRoute PKCloudBlogApp site) => Entity post -> WidgetFor site ()
 pkBlogDisplayPreview (Entity _ post) = do
     author <- handlerToWidget $ pkcloudDisplayName $ pkPostAuthor post
     authorIdent <- handlerToWidget $ pkcloudUniqueUsername $ pkPostAuthor post

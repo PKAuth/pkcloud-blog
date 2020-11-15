@@ -9,7 +9,7 @@ getPostsHelper page tag = do
     queryFilters <- generatePostFilters
 
     -- Get posts.
-    posts <- lift $ runDB $ select $ from $ \(InnerJoin p t) -> do
+    posts <- liftHandler $ runDB $ select $ from $ \(InnerJoin p t) -> do
         on (p ^. pkPostIdField ==. t ^. pkPostTagPostField)
         where_ (t ^. pkPostTagTagField ==. val tag &&. queryFilters p)
         limit qLimit
@@ -17,7 +17,7 @@ getPostsHelper page tag = do
         orderBy [desc (p ^. pkPostDateField)]
         return p
     
-    lift $ pkcloudDefaultLayout PKCloudBlogApp ("#" <> tag) $ do
+    liftHandler $ pkcloudDefaultLayout PKCloudBlogApp ("#" <> tag) $ do
         pkcloudSetTitle $ toHtml tag
 
         -- Display previews.

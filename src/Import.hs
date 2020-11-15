@@ -33,37 +33,37 @@ import PKCloud.Blog.Core as Export
 -- TODO: Move to PKCloud.Import?
 import Text.Blaze (Markup)
 -- | Type for forms in master site.
-type SiteForm site a = Markup -> MForm (HandlerT site IO) (FormResult a, WidgetT site IO ())
+type SiteForm site a = Markup -> MForm (HandlerFor site) (FormResult a, WidgetFor site ())
 -- type MasterForm site a = forall post tag . (PKCloudBlog site post tag, RenderMessage site FormMessage) => Markup -> MForm (HandlerT site IO) (FormResult a, WidgetT site IO ())
 
 
 
 -- type Handler master post a = (ToMasterRoute PKCloudBlogApp master, PKCloudBlog master post) => HandlerT PKCloudBlogApp (HandlerT master IO) a
-type Handler master post tag a = (ToMasterRoute PKCloudBlogApp master, PKCloudBlog master post tag) => HandlerT PKCloudBlogApp (HandlerT master IO) a
+type Handler master post tag a = (ToMasterRoute PKCloudBlogApp master, RedirectUrl master (Route PKCloudBlogApp), PKCloudBlog master post tag) => SubHandlerFor PKCloudBlogApp master a
 
 
 -- type Widget master post edit = (PKCloudBlog master post edit) => WidgetT PKCloudBlogApp (HandlerT master IO) ()
 -- type MasterWidget master = forall post edit . (PKCloudBlog master post edit) => WidgetT master IO ()
-type MasterWidget master = WidgetT master IO ()
+type MasterWidget master = WidgetFor master ()
 
 -- Check if the user id has blog enabled/can create posts.
 isBlogUser :: forall site post tag . AuthId site -> Handler site post tag Bool
 isBlogUser userId = do
-    app <- getYesod
-    appEnabled <- lift $ pkcloudAppEnabled app userId
+    app <- getSubYesod
+    appEnabled <- liftHandler $ pkcloudAppEnabled app userId
     if appEnabled then do
         -- Make a test post to see if the user can create posts.
         now <- getCurrentTime
         let (year, month, day) = splitDate now
         let testPost :: post = pkPost userId "test" now True "Test" "content" "content" Nothing year month day
 
-        lift $ pkcloudCanCreate testPost
+        liftHandler $ pkcloudCanCreate testPost
     else
         return False
 
 maybeBlogUserId :: forall site post tag . Handler site post tag (Maybe (AuthId site))
 maybeBlogUserId = do
-    userM <- lift maybeAuthId
+    userM <- liftHandler maybeAuthId
     case userM of
         Nothing ->
             return Nothing
@@ -76,7 +76,7 @@ maybeBlogUserId = do
 
 requireBlogUserId :: forall site post tag . Handler site post tag (AuthId site)
 requireBlogUserId = do
-    userId :: AuthId site <- lift requireAuthId
+    userId :: AuthId site <- liftHandler requireAuthId
 
     auth <- isBlogUser userId
     when (not auth) $
@@ -84,7 +84,7 @@ requireBlogUserId = do
 
     return userId
 
-getAutocompleteTags :: forall site post tag . (PKCloudBlog site post tag) => HandlerT site IO [Text]
+getAutocompleteTags :: forall site post tag . (PKCloudBlog site post tag) => HandlerFor site [Text]
 getAutocompleteTags = do
     -- Get distinct tags from DB.
     tags <- runDB $ select $ distinct $ from $ \(tag :: SqlExpr (Entity tag)) -> do
@@ -231,7 +231,7 @@ displayPostPreviews' emptyMessage posts page postsPerPage route routePage =
         postsPerPage' = fromInteger $ toInteger postsPerPage
         qLimit' = postsPerPage' + 1
 
-        navigationW :: Int64 -> [a] -> WidgetT site IO ()
+        navigationW :: Int64 -> [a] -> WidgetFor site ()
         navigationW page l = do
             -- Check if we should display the older button.
             let masterPostsRoute = toMasterRoute . routePage
@@ -292,7 +292,7 @@ displayPostPreviews' emptyMessage posts page postsPerPage route routePage =
                 <div .clearfix>
             |]
 
-makeColumns :: Maybe (WidgetT s IO ()) -> (WidgetT s IO ()) -> (WidgetT s IO ())
+makeColumns :: Maybe (WidgetFor s ()) -> (WidgetFor s ()) -> (WidgetFor s ())
 makeColumns Nothing w = [whamlet|
         <div .col-xs-12>
             ^{w}

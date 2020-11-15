@@ -16,7 +16,7 @@ data FormData = FormData {
     }
 
 generateHTML :: forall site post tag . (MasterWidget site, Enctype) -> Maybe (post, [Text]) -> Handler site post tag Html
-generateHTML (formW, formEnc) previewM = lift $ pkcloudDefaultLayout PKCloudBlogApp "New post" $ do
+generateHTML (formW, formEnc) previewM = liftHandler $ pkcloudDefaultLayout PKCloudBlogApp "New post" $ do
     pkcloudSetTitle "New post"
     [whamlet|
         <div .container>
@@ -81,7 +81,7 @@ renderNewForm tags previewM markup = do
         tagSettings = withAutocapitalizeNone $ withAutocorrectOff $ withPlaceholder "Tags" $
             bfs ("Tags" :: Text)
 
-        checkSlug :: forall site post tag . (PKCloudBlog site post tag) => (Int, Int, Int) -> PostLink -> HandlerT site IO (Either Text PostLink)
+        checkSlug :: forall site post tag . (PKCloudBlog site post tag) => (Int, Int, Int) -> PostLink -> HandlerFor site (Either Text PostLink)
         checkSlug (year, month, day) slug = do
             -- Check that slug isn't used.
             postM :: Maybe (Entity post) <- runDB $ getBy $ pkPostUniqueLink year month day slug
@@ -131,8 +131,8 @@ getPKCloudBlogNewR = do
     previewM <- getPendingPreview
 
     -- Generate form widget.
-    tags <- lift getAutocompleteTags
-    form <- lift $ generateFormPost $ renderNewForm tags previewM
+    tags <- liftHandler getAutocompleteTags
+    form <- liftHandler $ generateFormPost $ renderNewForm tags previewM
 
     -- Generate html.
     generateHTML form previewM 
@@ -145,14 +145,14 @@ postPKCloudBlogNewR = do
     previewM <- getPendingPreview
 
     -- Parse POST.
-    tags <- lift getAutocompleteTags
-    ((result, formW), formE) <- lift $ runFormPost $ renderNewForm tags previewM
+    tags <- liftHandler getAutocompleteTags
+    ((result, formW), formE) <- liftHandler $ runFormPost $ renderNewForm tags previewM
     case result of
         FormMissing -> do
-            lift $ pkcloudSetMessageDanger "Creating post failed."
+            liftHandler $ pkcloudSetMessageDanger "Creating post failed."
             generateHTML (formW, formE) previewM
         FormFailure _msg -> do
-            lift $ pkcloudSetMessageDanger "Creating post failed."
+            liftHandler $ pkcloudSetMessageDanger "Creating post failed."
             generateHTML (formW, formE) previewM
         FormSuccess (FormData title slug content' tagsM published) -> do
 
@@ -165,9 +165,9 @@ postPKCloudBlogNewR = do
             let tags = maybe [] id tagsM
 
             -- Check if user can create posts. 
-            hasPermission <- lift $ pkcloudCanCreate post
+            hasPermission <- liftHandler $ pkcloudCanCreate post
             when (not hasPermission) $ 
-                lift $ permissionDenied "You do not have permission to do that."
+                liftHandler $ permissionDenied "You do not have permission to do that."
 
             -- Check if preview was pressed or create.
             res <- lookupPostParam "submit"
@@ -179,21 +179,21 @@ postPKCloudBlogNewR = do
     where
         createPost formW formE tags post slug year month day previewM = do
             -- Insert post.
-            postM <- lift $ runDB $ insertUnique post
+            postM <- liftHandler $ runDB $ insertUnique post
             case postM of
                 Nothing -> do
                     -- Set message.
-                    lift $ pkcloudSetMessageDanger "Another post already exists with the same permalink."
+                    liftHandler $ pkcloudSetMessageDanger "Another post already exists with the same permalink."
                     generateHTML (formW, formE) previewM
                 Just postId -> do
                     -- Insert tags.
-                    lift $ runDB $ mapM_ (insert_ . pkPostTag postId) tags
+                    liftHandler $ runDB $ mapM_ (insert_ . pkPostTag postId) tags
 
                     -- Delete any saved previews.
                     deleteSession pkcloudBlogPreviewNewKey
 
                     -- Set message.
-                    lift $ pkcloudSetMessageSuccess "Successfully created post!"
+                    liftHandler $ pkcloudSetMessageSuccess "Successfully created post!"
 
                     -- Redirect to post's edit page. 
                     redirect $ PKCloudBlogEditR year (Int2 month) (Int2 day) slug

@@ -6,7 +6,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Import
 
 generateHTML :: forall site post tag . PostYear -> PostMonth -> PostDay -> post -> (MasterWidget site, Enctype) -> Maybe (post, [Text]) -> Handler site post tag Html
-generateHTML year month day post (formW, formEnc) editM = lift $ pkcloudDefaultLayout PKCloudBlogApp "Edit post" $ do
+generateHTML year month day post (formW, formEnc) editM = liftHandler $ pkcloudDefaultLayout PKCloudBlogApp "Edit post" $ do
     pkcloudSetTitle "Edit post"
 
     -- Make delete form.
@@ -142,13 +142,13 @@ generateEditForm :: forall site post tag . Either (Entity post) (post, [Text]) -
 
 -- Default to pending edits.
 generateEditForm (Right (post, tags)) = do
-    autoTags <- lift getAutocompleteTags
+    autoTags <- liftHandler getAutocompleteTags
     return $ renderEditForm post autoTags tags
 
 -- Otherwise, default to existing post.
 generateEditForm (Left (Entity postId post)) = do
-    autoTags <- lift getAutocompleteTags
-    oldTags <- fmap (fmap unValue) $ lift $ runDB $ select $ from $ \tag -> do
+    autoTags <- liftHandler getAutocompleteTags
+    oldTags <- fmap (fmap unValue) $ liftHandler $ runDB $ select $ from $ \tag -> do
         where_ (tag ^. pkPostTagPostField ==. val postId)
         return (tag ^. pkPostTagTagField)
     return $ renderEditForm post autoTags oldTags
@@ -162,21 +162,21 @@ postPKCloudBlogClearEditsR year (Int2 month) (Int2 day) slug = do
     _ <- requireBlogUserId
 
     -- Lookup post.
-    postM :: Maybe (Entity post) <- lift $ runDB $ getBy $ pkPostUniqueLink year month day slug
+    postM :: Maybe (Entity post) <- liftHandler $ runDB $ getBy $ pkPostUniqueLink year month day slug
     case postM of
         Nothing ->
-            lift notFound
+            liftHandler notFound
         Just (Entity postId post) -> do
             -- Check if user can edit.
-            hasPermission <- lift $ pkcloudCanWrite post
+            hasPermission <- liftHandler $ pkcloudCanWrite post
             when (not hasPermission) $ 
-                lift $ permissionDenied "You do not have permission to edit this post."
+                liftHandler $ permissionDenied "You do not have permission to edit this post."
 
             -- Delete session edits.
             deleteSession $ pkcloudBlogPreviewEditKey postId
 
             -- Set message.
-            lift $ pkcloudSetMessageSuccess "Cleared edits."
+            liftHandler $ pkcloudSetMessageSuccess "Cleared edits."
 
             -- Redirect.
             redirect $ PKCloudBlogEditR year (Int2 month) (Int2 day) slug
@@ -187,22 +187,22 @@ getPKCloudBlogEditR year (Int2 month) (Int2 day) slug = do
     _ <- requireBlogUserId
 
     -- Lookup post.
-    postM :: Maybe (Entity post) <- lift $ runDB $ getBy $ pkPostUniqueLink year month day slug
+    postM :: Maybe (Entity post) <- liftHandler $ runDB $ getBy $ pkPostUniqueLink year month day slug
     case postM of
         Nothing ->
-            lift notFound
+            liftHandler notFound
         Just postE@(Entity postId post) -> do
             -- Check if user can edit.
-            hasPermission <- lift $ pkcloudCanWrite post
+            hasPermission <- liftHandler $ pkcloudCanWrite post
             when (not hasPermission) $ 
-                lift $ permissionDenied "You do not have permission to edit this post."
+                liftHandler $ permissionDenied "You do not have permission to edit this post."
 
             -- Check if there are edits in the session.
             editM <- getPendingEdits postId
 
             -- Generate form.
             let postD = maybe (Left postE) Right editM
-            form <- generateEditForm postD >>= lift . generateFormPost 
+            form <- generateEditForm postD >>= liftHandler . generateFormPost 
 
             -- Generate HTML.
             generateHTML year month day post form editM
@@ -212,28 +212,28 @@ postPKCloudBlogEditR year (Int2 month) (Int2 day) slug = do
     _ <- requireBlogUserId
 
     -- Lookup post.
-    postM :: Maybe (Entity post) <- lift $ runDB $ getBy $ pkPostUniqueLink year month day slug
+    postM :: Maybe (Entity post) <- liftHandler $ runDB $ getBy $ pkPostUniqueLink year month day slug
     case postM of
         Nothing ->
-            lift notFound
+            liftHandler notFound
         Just postE@(Entity postId post) -> do
             -- Check if user can edit.
-            hasPermission <- lift $ pkcloudCanWrite post
+            hasPermission <- liftHandler $ pkcloudCanWrite post
             when (not hasPermission) $ 
-                lift $ permissionDenied "You do not have permission to edit this post."
+                liftHandler $ permissionDenied "You do not have permission to edit this post."
 
             -- Check if there are edits in the session.
             editM <- getPendingEdits postId
 
             -- Parse form.
             let postD = maybe (Left postE) Right editM
-            ((result, formW), formE) <- generateEditForm postD >>= lift . runFormPost
+            ((result, formW), formE) <- generateEditForm postD >>= liftHandler . runFormPost
             case result of
                 FormMissing -> do
-                    lift $ pkcloudSetMessageDanger "Editing post failed."
+                    liftHandler $ pkcloudSetMessageDanger "Editing post failed."
                     generateHTML year month day post (formW, formE) editM
                 FormFailure _msg -> do
-                    lift $ pkcloudSetMessageDanger "Editing post failed."
+                    liftHandler $ pkcloudSetMessageDanger "Editing post failed."
                     generateHTML year month day post (formW, formE) editM
                 FormSuccess (FormData title content' tagsM published) -> do
                     -- Update post.
@@ -261,7 +261,7 @@ postPKCloudBlogEditR year (Int2 month) (Int2 day) slug = do
             redirect $ PKCloudBlogEditR year (Int2 month) (Int2 day) slug
 
         updatePost postId newPost tags = do
-            lift $ runDB $ do
+            liftHandler $ runDB $ do
 
                 -- Update post.
                 replace postId newPost
@@ -277,7 +277,7 @@ postPKCloudBlogEditR year (Int2 month) (Int2 day) slug = do
             deleteSession $ pkcloudBlogPreviewEditKey postId
 
             -- Set message.
-            lift $ pkcloudSetMessageSuccess "Successfully edited post!"
+            liftHandler $ pkcloudSetMessageSuccess "Successfully edited post!"
 
             -- Redirect.
             redirect $ PKCloudBlogEditR year (Int2 month) (Int2 day) slug
@@ -290,35 +290,35 @@ postPKCloudBlogDeleteR :: forall site post tag . PostYear -> PostMonth2 -> PostD
 postPKCloudBlogDeleteR year (Int2 month) (Int2 day) slug = do
     _ <- requireBlogUserId
     -- Lookup post.
-    postM :: Maybe (Entity post) <- lift $ runDB $ getBy $ pkPostUniqueLink year month day slug
+    postM :: Maybe (Entity post) <- liftHandler $ runDB $ getBy $ pkPostUniqueLink year month day slug
     case postM of
         Nothing ->
-            lift notFound
+            liftHandler notFound
         Just (Entity postId post) -> do
             -- Check if user can edit.
-            hasPermission <- lift $ pkcloudCanWrite post
+            hasPermission <- liftHandler $ pkcloudCanWrite post
             when (not hasPermission) $ 
-                lift $ permissionDenied "You do not have permission to edit this post."
+                liftHandler $ permissionDenied "You do not have permission to edit this post."
             
             -- Parse form.
-            ((result, _), _) <- lift $ runFormPost renderDeleteForm
+            ((result, _), _) <- liftHandler $ runFormPost renderDeleteForm
             case result of
                 FormMissing -> do
-                    lift $ pkcloudSetMessageDanger "Deleting post failed."
+                    liftHandler $ pkcloudSetMessageDanger "Deleting post failed."
                     redirect $ PKCloudBlogEditR year (Int2 month) (Int2 day) slug
                 FormFailure _msg -> do
-                    lift $ pkcloudSetMessageDanger "Deleting post failed."
+                    liftHandler $ pkcloudSetMessageDanger "Deleting post failed."
                     redirect $ PKCloudBlogEditR year (Int2 month) (Int2 day) slug
                 FormSuccess () -> do
                     -- Delete post.
-                    lift $ runDB $ do
+                    liftHandler $ runDB $ do
                         delete $ from $ \tag -> do
                             where_ (tag ^. pkPostTagPostField ==. val postId)
                         
                         deleteKey postId
 
                     -- Set message.
-                    lift $ pkcloudSetMessageSuccess "Successfully deleted post."
+                    liftHandler $ pkcloudSetMessageSuccess "Successfully deleted post."
 
                     -- Redirect to posts page.
                     redirect PKCloudBlogPostsR

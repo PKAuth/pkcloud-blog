@@ -19,7 +19,7 @@ import PKCloud.Blog.Handler.Tag
 
 import PKCloud.Blog.Core as Export
 
-instance (ToMasterRoute PKCloudBlogApp master, PKCloudBlog master post tag) => YesodSubDispatch PKCloudBlogApp (HandlerT master IO) where
+instance (ToMasterRoute PKCloudBlogApp master, RedirectUrl master (Route PKCloudBlogApp), PKCloudBlog master post tag) => YesodSubDispatch PKCloudBlogApp master where
     yesodSubDispatch = $(mkYesodSubDispatch resourcesPKCloudBlogApp)
 
 -- BlogPost

@@ -14,7 +14,7 @@ getPKCloudBlogRootR = do -- redirect PKCloudBlogPostsR
     -- JP: Redirect if user isn't logged in?
 
     let title = pkcloudAppName PKCloudBlogApp
-    lift $ pkcloudDefaultLayout PKCloudBlogApp title $ do
+    liftHandler $ pkcloudDefaultLayout PKCloudBlogApp title $ do
         pkcloudSetTitle $ toHtml title
 
         toWidget [lucius|
@@ -36,7 +36,7 @@ getPKCloudBlogRootR = do -- redirect PKCloudBlogPostsR
 
     where
 
-        authorPostsW :: Maybe (AuthId site) -> (SqlExpr (Entity post) -> SqlExpr (E.Value Bool)) -> WidgetT site IO ()
+        authorPostsW :: Maybe (AuthId site) -> (SqlExpr (Entity post) -> SqlExpr (E.Value Bool)) -> WidgetFor site ()
         authorPostsW Nothing _ = return ()
         authorPostsW (Just uId) queryFilters = do
             
@@ -61,7 +61,7 @@ getPKCloudBlogRootR = do -- redirect PKCloudBlogPostsR
                 ^{displayPostPreviewsAsAuthor posts 1 dLimit (PKCloudBlogAuthorR authorIdent) (PKCloudBlogAuthorPageR authorIdent)}
             |]
 
-        recentPostsW :: (SqlExpr (Entity post) -> SqlExpr (E.Value Bool)) -> WidgetT site IO ()
+        recentPostsW :: (SqlExpr (Entity post) -> SqlExpr (E.Value Bool)) -> WidgetFor site ()
         recentPostsW queryFilters = do
             
             -- Get recent posts.
